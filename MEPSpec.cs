@@ -1319,43 +1319,30 @@ namespace TNovMEPSpec
 
                 int gmCounter = 0; //счетчик заполняемых семейств из collector2
 
-                var typeCache = new Dictionary<ElementId, TypeInfo>();
                 var elems = new List<ElementInfo>();
 
                 foreach (Element elem in collector) //заполнение кэша
                 {
-                    ElementId typeId = elem.GetTypeId();
-                    if (!typeCache.TryGetValue(typeId, out TypeInfo typeInfo))
-                    {
-                        Element typeElem = doc.GetElement(typeId);
-                        typeInfo = new TypeInfo
-                        {
-                            AdskGroup = typeElem?.get_Parameter(adskGparamGuid)?.AsString() ?? "",
-                            NSort = typeElem?.get_Parameter(NSortparamGuid)?.AsString() ?? "",
-                            Obozn = typeElem?.get_Parameter(adskOboznparamGuid)?.AsString() ?? "",
-                            Code = typeElem?.get_Parameter(adskCodeparamGuid)?.AsString() ?? "",
-                            Manuf = typeElem?.get_Parameter(adskManufparamGuid)?.AsString() ?? "",
-                            Ed = typeElem?.get_Parameter(adskEdparamGuid)?.AsString() ?? ""
-                        };
-                        typeCache[typeId] = typeInfo;
-                    }
-
                     elems.Add(new ElementInfo
                     {
                         Id = elem.Id,
-                        TypeId = typeId,
-                        AdskNaim = elem.get_Parameter(adskNparamGuid)?.AsString() ?? "",
-                        Mark = elem.get_Parameter(adskMarkparamGuid)?.AsString() ?? "",
-                        Neg = elem.get_Parameter(NEGparamGuid)?.AsString() ?? "",
+                        AdskNaim = Param.GetStringParamValue(doc,adskNparamGuid,elem),
+                        Mark = Param.GetStringParamValue(doc, adskMarkparamGuid, elem),
+                        Neg = Param.GetStringParamValue(doc, NEGparamGuid, elem),
                         OSet = Param.GetStringParamValue(doc, OSetparamGuid, elem), // можно тоже закэшировать
-                        Count = elem.get_Parameter(adskCparamGuid)?.AsDouble() ?? 0,
-                        Type = typeInfo,
-                        NCableWay = Param.GetStringParamValue(doc, NCableWayparamGuid,elem)
+                        Count = Param.GetDoubleParamValue(doc, adskCparamGuid, elem),
+                        NCableWay = Param.GetStringParamValue(doc, NCableWayparamGuid,elem),
+                        AdskGroup = Param.GetStringParamValue(doc, adskGparamGuid, elem),
+                        NSort = Param.GetStringParamValue(doc,NSortparamGuid, elem),
+                        Obozn = Param.GetStringParamValue(doc,adskOboznparamGuid, elem),
+                        Code = Param.GetStringParamValue(doc, adskCodeparamGuid, elem),
+                        Manuf = Param.GetStringParamValue(doc, adskManufparamGuid, elem),
+                        Ed = Param.GetStringParamValue(doc,adskEdparamGuid, elem)
                     });
                 }
 
                 var grouped = elems
-                    .GroupBy(e => e.Type.AdskGroup)
+                    .GroupBy(e => e.AdskGroup)
                     .OrderBy(g => g.Key)
                     .Select(g1 => new
                     {
@@ -1367,7 +1354,7 @@ namespace TNovMEPSpec
                             {
                                 g2.Key,
                                 SubGroups = g2
-                                    .GroupBy(e => e.Type.NSort)
+                                    .GroupBy(e => e.NSort)
                                     .OrderByDescending(g => g.Key) // обратная сортировка
                                     .Select(g3 => new
                                     {
@@ -1403,7 +1390,6 @@ namespace TNovMEPSpec
                                     foreach (var g6 in g5.SubGroups)
                                     {
                                     var firstElem = g6.Elements.First();
-                                    var typeInfo = firstElem.Type;
 
                                     double totalCount = g6.Elements.Sum(e => e.Count);
 
@@ -1413,18 +1399,18 @@ namespace TNovMEPSpec
 
                                     elCubes.Add(new ElNonModelCube
                                     {
-                                        adskGroup = typeInfo.AdskGroup,
+                                        adskGroup = firstElem.AdskGroup,
                                         adskNaim = naim,
                                         adskMark = mrk,
-                                        adskObozn = typeInfo.Obozn,
-                                        adskCode = typeInfo.Code,
-                                        adskManuf = typeInfo.Manuf,
-                                        adskEd = typeInfo.Ed,
+                                        adskObozn = firstElem.Obozn,
+                                        adskCode = firstElem.Code,
+                                        adskManuf = firstElem.Manuf,
+                                        adskEd = firstElem.Ed,
                                         NEGroup = firstElem.Neg,
-                                        NSort = typeInfo.NSort,
+                                        NSort = firstElem.NSort,
                                         OSet = firstElem.OSet,
                                         NCableWay = firstElem.NCableWay,
-                                        adskC = totalCount,
+                                        adskC = totalCount
                                     });
 
                                     Logger.Log($"№ {gmCounter++} : ...", 2);

@@ -479,18 +479,12 @@ namespace TNovMEPSpec
     public sealed class ElementInfo
     {
         public ElementId Id { get; set; }
-        public ElementId TypeId { get; set; }
         public string AdskNaim { get; set; }
         public string Mark { get; set; }
         public string Neg { get; set; }
         public string OSet { get; set; }
         public double Count { get; set; }
-        public TypeInfo Type { get; set; }
         public string NCableWay {  get; set; }
-    }
-
-    public sealed class TypeInfo
-    {
         public string AdskGroup { get; set; }
         public string NSort { get; set; }
         public string Obozn { get; set; }
@@ -498,4 +492,5 @@ namespace TNovMEPSpec
         public string Manuf { get; set; }
         public string Ed { get; set; }
     }
+
 }
