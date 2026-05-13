@@ -89,8 +89,6 @@ namespace TNovMEPSpec
             Dispatcher.Run();
         }
 
-        
-        
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
         {
             #region Исходные
@@ -1546,45 +1544,77 @@ namespace TNovMEPSpec
                 //транзакция
                 using (Transaction transaction = new Transaction(doc))
                 {
-                    transaction.Start("TNov Сводная спека");
-                    Logger.Log("Открываем транзакцию", 1);
-
-                    for (int i = 0; i < elCubes.Count(); i++)
+                    try
                     {
-                        Logger.Log("индекс "+i.ToString()+" ", 2);
-                        //ищем в targetElements элемент с индексом i
-                        Element targetElem = doc.GetElement(targetElements[i].Id);
-                        targetElem.get_Parameter(adskGparamGuid)?.Set(elCubes[i].adskGroup);//ADSK_Группирование
-                        targetElem.get_Parameter(adskNparamGuid)?.Set(elCubes[i].adskNaim);//ADSK_Наименование
-                        targetElem.get_Parameter(adskMarkparamGuid)?.Set(elCubes[i].adskMark);//ADSK_Марка
-                        //targetElem.get_Parameter(adskOboznparamGuid)?.Set(elCubes[i].adskObozn);//ADSK_Обозначение
-                        targetElem.get_Parameter(adskCodeparamGuid)?.Set(elCubes[i].adskCode);//ADSK_Код изделия
-                        targetElem.get_Parameter(adskManufparamGuid)?.Set(elCubes[i].adskManuf);//ADSK_Завод-изготовитель
-                        targetElem.get_Parameter(adskEdparamGuid)?.Set(elCubes[i].adskEd);//ADSK_Единица измерения
-                        targetElem.get_Parameter(adskCparamGuid)?.Set(elCubes[i].adskC);//ADSK_Количество
-                        targetElem.get_Parameter(NEGparamGuid)?.Set(elCubes[i].NEGroup);//N_ЭЛ.Группирование ЭЛ
-                        targetElem.get_Parameter(NSortparamGuid)?.Set(elCubes[i].NSort);//N_Сортировка
-                        targetElem.get_Parameter(OSetparamGuid)?.Set(elCubes[i].OSet);//О_Комплект
-                    }
-                    Logger.Log("Обнуление оставшихся элементов", 1);
-                    for (int i = elCubes.Count(); i < targetElements.Count(); i++) //обнуляем оставшиеся элементы
-                    {
-                        Element targetElem = doc.GetElement(targetElements[i].Id);
-                        targetElem.get_Parameter(adskGparamGuid)?.Set("");//ADSK_Группирование
-                        targetElem.get_Parameter(adskNparamGuid)?.Set("");//ADSK_Наименование
-                        targetElem.get_Parameter(adskMarkparamGuid)?.Set("");//ADSK_Марка
-                        //targetElem.get_Parameter(adskOboznparamGuid)?.Set("");//ADSK_Обозначение
-                        targetElem.get_Parameter(adskCodeparamGuid)?.Set("");//ADSK_Код изделия
-                        targetElem.get_Parameter(adskManufparamGuid)?.Set("");//ADSK_Завод-изготовитель
-                        targetElem.get_Parameter(adskEdparamGuid)?.Set("");//ADSK_Единица измерения
-                        targetElem.get_Parameter(adskCparamGuid)?.Set(0);//ADSK_Количество
-                        targetElem.get_Parameter(NEGparamGuid)?.Set("");//N_ЭЛ.Группирование ЭЛ
-                        targetElem.get_Parameter(NSortparamGuid)?.Set("");//N_Сортировка
-                        targetElem.get_Parameter(OSetparamGuid)?.Set("");//О_Комплект
-                    }
+                        transaction.Start("TNov Сводная спека");
+                        Logger.Log("Открываем транзакцию", 1);
 
-                    Logger.Log("Закрываем транзакцию", 1);
-                    transaction.Commit();
+                        Thread thread = new Thread(new ThreadStart(this.ThreadStartingPoint));
+                        thread.SetApartmentState(ApartmentState.STA);
+                        thread.IsBackground = true;
+                        thread.Start();
+                        Thread.Sleep(100);
+
+
+                        int PBCount = 0;
+                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Minimum = (double)PBCount));
+                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Maximum = elCubes.Count()));
+                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.maxvalue.Text = elCubes.Count().ToString()));
+
+
+                        for (int i = 0; i < elCubes.Count(); i++)
+                        {
+                            Logger.Log("индекс " + i.ToString() + " ", 2);
+                            //ищем в targetElements элемент с индексом i
+                            Element targetElem = doc.GetElement(targetElements[i].Id);
+                            targetElem.get_Parameter(adskGparamGuid)?.Set(elCubes[i].adskGroup);//ADSK_Группирование
+                            targetElem.get_Parameter(adskNparamGuid)?.Set(elCubes[i].adskNaim);//ADSK_Наименование
+                            targetElem.get_Parameter(adskMarkparamGuid)?.Set(elCubes[i].adskMark);//ADSK_Марка
+                                                                                                  //targetElem.get_Parameter(adskOboznparamGuid)?.Set(elCubes[i].adskObozn);//ADSK_Обозначение
+                            targetElem.get_Parameter(adskCodeparamGuid)?.Set(elCubes[i].adskCode);//ADSK_Код изделия
+                            targetElem.get_Parameter(adskManufparamGuid)?.Set(elCubes[i].adskManuf);//ADSK_Завод-изготовитель
+                            targetElem.get_Parameter(adskEdparamGuid)?.Set(elCubes[i].adskEd);//ADSK_Единица измерения
+                            targetElem.get_Parameter(adskCparamGuid)?.Set(elCubes[i].adskC);//ADSK_Количество
+                            targetElem.get_Parameter(NEGparamGuid)?.Set(elCubes[i].NEGroup);//N_ЭЛ.Группирование ЭЛ
+                            targetElem.get_Parameter(NSortparamGuid)?.Set(elCubes[i].NSort);//N_Сортировка
+                            targetElem.get_Parameter(OSetparamGuid)?.Set(elCubes[i].OSet);//О_Комплект
+                            targetElem.get_Parameter(NCableWayparamGuid)?.Set(elCubes[i].NCableWay);
+
+                            PBCount++;
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+
+                        }
+                        Logger.Log("Обнуление оставшихся элементов", 1);
+                        for (int i = elCubes.Count(); i < targetElements.Count(); i++) //обнуляем оставшиеся элементы
+                        {
+                            Element targetElem = doc.GetElement(targetElements[i].Id);
+                            targetElem.get_Parameter(adskGparamGuid)?.Set("");//ADSK_Группирование
+                            targetElem.get_Parameter(adskNparamGuid)?.Set("");//ADSK_Наименование
+                            targetElem.get_Parameter(adskMarkparamGuid)?.Set("");//ADSK_Марка
+                                                                                 //targetElem.get_Parameter(adskOboznparamGuid)?.Set("");//ADSK_Обозначение
+                            targetElem.get_Parameter(adskCodeparamGuid)?.Set("");//ADSK_Код изделия
+                            targetElem.get_Parameter(adskManufparamGuid)?.Set("");//ADSK_Завод-изготовитель
+                            targetElem.get_Parameter(adskEdparamGuid)?.Set("");//ADSK_Единица измерения
+                            targetElem.get_Parameter(adskCparamGuid)?.Set(0);//ADSK_Количество
+                            targetElem.get_Parameter(NEGparamGuid)?.Set("");//N_ЭЛ.Группирование ЭЛ
+                            targetElem.get_Parameter(NSortparamGuid)?.Set("");//N_Сортировка
+                            targetElem.get_Parameter(OSetparamGuid)?.Set("");//О_Комплект
+                            targetElem.get_Parameter(NCableWayparamGuid)?.Set("");
+                        }
+
+                        Logger.Log("Закрываем транзакцию", 1);
+                        transaction.Commit();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log("Ошибка: " + ex.Message, 4);
+                    }
+                    finally
+                    {
+                        CloseProgressBarSafely();
+                    }
                 }
             }
             #endregion
@@ -1980,430 +2010,440 @@ namespace TNovMEPSpec
                 {
                     using (Transaction transaction = new Transaction(doc))
                     {
-                        TransactionHandler.SetWarningResolver(transaction);
-                        transaction.Start("TNov - Сводная спека");
-                        Logger.Log("Открываем транзакцию", 1);
-
-
-                        Thread thread = new Thread(new ThreadStart(this.ThreadStartingPoint));
-                        thread.SetApartmentState(ApartmentState.STA);
-                        thread.IsBackground = true;
-                        thread.Start();
-                        Thread.Sleep(100);
-
-
-                        int PBCount = 0;
-                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Minimum = (double)PBCount));
-                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Maximum = (double)allcount));
-                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.maxvalue.Text = allcount.ToString()));
-
-
-                        Logger.Log("Арматура воздуховодов:", 1);
-                        if (ArmVozd.Count > 0 && viewModel.run1)
+                        try
                         {
-                            foreach (Element a in ArmVozd)
-                            {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parArmVozd;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                            }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            TransactionHandler.SetWarningResolver(transaction);
+                            transaction.Start("TNov - Сводная спека");
+                            Logger.Log("Открываем транзакцию", 1);
 
-                        Logger.Log("Воздухораспределители:", 1);
-                        if (Vozdrasp.Count > 0 && viewModel.run2)
-                        {
-                            foreach (Element a in Vozdrasp)
-                            {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parVozdrasp;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                            }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Гибкие воздуховоды:", 1);
-                        if (GibkVozd.Count > 0 && viewModel.run3)
-                        {
-                            string cat = "Гибкие воздуховоды";
-                            foreach (Element a in GibkVozd)
-                            {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parGibkVozd;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                                bool success3 = true;
-                                if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
-                                if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
-                            }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            Thread thread = new Thread(new ThreadStart(this.ThreadStartingPoint));
+                            thread.SetApartmentState(ApartmentState.STA);
+                            thread.IsBackground = true;
+                            thread.Start();
+                            Thread.Sleep(100);
 
-                        Logger.Log("Внутр изоляция возд:", 1);
-                        if (VnIsolVozd.Count > 0 && viewModel.run4)
-                        {
-                            foreach (Element a in VnIsolVozd)
-                            {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parVnIsolVozd;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                            }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Воздуховоды:", 1);
-                        if (Vozd.Count > 0 && viewModel.run5)
-                        {
-                            string cat = "Воздуховоды";
-                            foreach (Element a in Vozd)
-                            {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parVozd;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                                bool success3 = true;
-                                if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
-                                if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
-                            }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            int PBCount = 0;
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Minimum = (double)PBCount));
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Maximum = (double)allcount));
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.maxvalue.Text = allcount.ToString()));
 
-                        Logger.Log("Изоляция возд:", 1);
-                        if (IsolVozd.Count > 0 && viewModel.run6)
-                        {
-                            string cat = "Материалы изоляции воздуховодов";
-                            foreach (Element a in IsolVozd)
-                            {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parIsolVozd;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                                bool success3 = true;
-                                if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
-                                if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
-                            }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Фитинги возд:", 1);
-                        if (FitVozd.Count > 0 && viewModel.run7)
-                        {
-                            string cat = "Соединительные детали воздуховодов";
-                            foreach (Element a in FitVozd)
+                            Logger.Log("Арматура воздуховодов:", 1);
+                            if (ArmVozd.Count > 0 && viewModel.run1)
                             {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parFitVozd;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                                bool success3 = true;
-                                if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
-                                if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                foreach (Element a in ArmVozd)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parArmVozd;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                }
                             }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Оборудование:", 1);
-                        if (Obor.Count > 0 && viewModel.run8)
-                        {
-                            foreach (Element a in Obor)
+                            Logger.Log("Воздухораспределители:", 1);
+                            if (Vozdrasp.Count > 0 && viewModel.run2)
                             {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parObor;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                foreach (Element a in Vozdrasp)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parVozdrasp;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                }
                             }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Арматура труб:", 1);
-                        if (ArmTrub.Count > 0 && viewModel.run9)
-                        {
-                            foreach (Element a in ArmTrub)
+                            Logger.Log("Гибкие воздуховоды:", 1);
+                            if (GibkVozd.Count > 0 && viewModel.run3)
                             {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parArmTrub;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                string cat = "Гибкие воздуховоды";
+                                foreach (Element a in GibkVozd)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parGibkVozd;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                    bool success3 = true;
+                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
+                                    if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                }
                             }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Гибкие трубы:", 1);
-                        if (GibkTrub.Count > 0 && viewModel.run10)
-                        {
-                            string cat = "Гибкие трубы";
-                            foreach (Element a in GibkTrub)
+                            Logger.Log("Внутр изоляция возд:", 1);
+                            if (VnIsolVozd.Count > 0 && viewModel.run4)
                             {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parGibkTrub;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                                bool success3 = true;
-                                if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
-                                if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                foreach (Element a in VnIsolVozd)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parVnIsolVozd;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                }
                             }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Трубы:", 1);
-                        if (Trub.Count > 0 && viewModel.run11)
-                        {
-                            string cat = "Трубы";
-                            foreach (Element a in Trub)
+                            Logger.Log("Воздуховоды:", 1);
+                            if (Vozd.Count > 0 && viewModel.run5)
                             {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parTrub;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                                bool success3 = true;
-                                if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
-                                if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                string cat = "Воздуховоды";
+                                foreach (Element a in Vozd)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parVozd;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                    bool success3 = true;
+                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
+                                    if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                }
                             }
-                            if (runcatalogs)
-                            {
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                                //PEX - убрано 05/2026
-                                /*List<ElementId> TrubIds = new List<ElementId>(); foreach (Element t in Trub) TrubIds.Add(t.Id);
-                                bool PEXmarkCheck = modulePEX.PEXpipesTypeMarkCheck(TrubIds);
-                                modulePEX mPEX = new modulePEX();
-                                mPEX.PEXpipesReadExcel(out List<string> PEXPipeDiams, out List<string> PEXPipeMass, out List<string> PEXPipeArts, out List<string> PEXPipeMans, out List<string> PEXPipeTypes);
-                                mPEX.PEXfitsReadExcel(out List<string> PEXFitCodes, out List<string> PEXFitArt1, out List<string> PEXFitArt2, out List<string> PEXFitArt3);
+                            Logger.Log("Изоляция возд:", 1);
+                            if (IsolVozd.Count > 0 && viewModel.run6)
+                            {
+                                string cat = "Материалы изоляции воздуховодов";
+                                foreach (Element a in IsolVozd)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parIsolVozd;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                    bool success3 = true;
+                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
+                                    if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                }
+                            }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+
+                            Logger.Log("Фитинги возд:", 1);
+                            if (FitVozd.Count > 0 && viewModel.run7)
+                            {
+                                string cat = "Соединительные детали воздуховодов";
+                                foreach (Element a in FitVozd)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parFitVozd;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                    bool success3 = true;
+                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
+                                    if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                }
+                            }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+
+                            Logger.Log("Оборудование:", 1);
+                            if (Obor.Count > 0 && viewModel.run8)
+                            {
+                                foreach (Element a in Obor)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parObor;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                }
+                            }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+
+                            Logger.Log("Арматура труб:", 1);
+                            if (ArmTrub.Count > 0 && viewModel.run9)
+                            {
+                                foreach (Element a in ArmTrub)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parArmTrub;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                }
+                            }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+
+                            Logger.Log("Гибкие трубы:", 1);
+                            if (GibkTrub.Count > 0 && viewModel.run10)
+                            {
+                                string cat = "Гибкие трубы";
+                                foreach (Element a in GibkTrub)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parGibkTrub;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                    bool success3 = true;
+                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
+                                    if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                }
+                            }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+
+                            Logger.Log("Трубы:", 1);
+                            if (Trub.Count > 0 && viewModel.run11)
+                            {
+                                string cat = "Трубы";
                                 foreach (Element a in Trub)
                                 {
-                                    bool success4 = true;
-                                    if (PEXmarkCheck) mPEX.PEXPipeSetParams(dateTime, TNovClassName, a, 1, PEXPipeDiams, PEXPipeMass, PEXPipeArts, PEXPipeMans, PEXPipeTypes, out success4);
-                                    //пока что коэффициент = 1
-                                    if (success4 == false) { failed4.Add(a.Id.ToString()); failscount++; continue; }
-                                }*/
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parTrub;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                    bool success3 = true;
+                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
+                                    if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                }
+                                if (runcatalogs)
+                                {
+
+                                    //PEX - убрано 05/2026
+                                    /*List<ElementId> TrubIds = new List<ElementId>(); foreach (Element t in Trub) TrubIds.Add(t.Id);
+                                    bool PEXmarkCheck = modulePEX.PEXpipesTypeMarkCheck(TrubIds);
+                                    modulePEX mPEX = new modulePEX();
+                                    mPEX.PEXpipesReadExcel(out List<string> PEXPipeDiams, out List<string> PEXPipeMass, out List<string> PEXPipeArts, out List<string> PEXPipeMans, out List<string> PEXPipeTypes);
+                                    mPEX.PEXfitsReadExcel(out List<string> PEXFitCodes, out List<string> PEXFitArt1, out List<string> PEXFitArt2, out List<string> PEXFitArt3);
+                                    foreach (Element a in Trub)
+                                    {
+                                        bool success4 = true;
+                                        if (PEXmarkCheck) mPEX.PEXPipeSetParams(dateTime, TNovClassName, a, 1, PEXPipeDiams, PEXPipeMass, PEXPipeArts, PEXPipeMans, PEXPipeTypes, out success4);
+                                        //пока что коэффициент = 1
+                                        if (success4 == false) { failed4.Add(a.Id.ToString()); failscount++; continue; }
+                                    }*/
+                                }
+
+
                             }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
-
-                        Logger.Log("Материалы изоляции труб:", 1);
-                        if (IsolTrub.Count > 0 && viewModel.run12)
-                        {
-                            string cat = "Материалы изоляции труб";
-                            foreach (Element a in IsolTrub)
+                            Logger.Log("Материалы изоляции труб:", 1);
+                            if (IsolTrub.Count > 0 && viewModel.run12)
                             {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parIsolTrub;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                                bool success3 = true;
-                                if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
-                                if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                string cat = "Материалы изоляции труб";
+                                foreach (Element a in IsolTrub)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parIsolTrub;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                    bool success3 = true;
+                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
+                                    if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
+                                }
                             }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Фитинги труб:", 1);
-                        if (FitTrub.Count > 0 && viewModel.run13)
-                        {
-                            foreach (Element a in FitTrub)
+                            Logger.Log("Фитинги труб:", 1);
+                            if (FitTrub.Count > 0 && viewModel.run13)
                             {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parFitTrub;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                            }
-                            if (runcatalogs)
-                            {
-                                //PEX
-                                List<ElementId> TrubIds = new List<ElementId>(); foreach (Element t in Trub) TrubIds.Add(t.Id);
-                                bool PEXmarkCheck = modulePEX.PEXpipesTypeMarkCheck(TrubIds);
-                                modulePEX mPEX = new modulePEX();
-                                //mPEX.PEXpipesReadExcel(out List<string> PEXPipeDiams, out List<string> PEXPipeMass, out List<string> PEXPipeArts, out List<string> PEXPipeMans, out List<string> PEXPipeTypes);
-                                mPEX.PEXfitsReadExcel(out List<string> PEXFitCodes, out List<string> PEXFitArt1, out List<string> PEXFitArt2, out List<string> PEXFitArt3);
                                 foreach (Element a in FitTrub)
                                 {
-                                    bool success4 = true;
-                                    if (PEXmarkCheck) mPEX.PEXFitsSetParams(dateTime, TNovClassName, a.Id, PEXFitCodes, PEXFitArt1, PEXFitArt2, PEXFitArt3, out success4);
-                                    if (success4 == false) { failed4.Add(a.Id.ToString()); failscount++; continue; }
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parFitTrub;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                }
+                                if (runcatalogs)
+                                {
+                                    //PEX
+                                    List<ElementId> TrubIds = new List<ElementId>(); foreach (Element t in Trub) TrubIds.Add(t.Id);
+                                    bool PEXmarkCheck = modulePEX.PEXpipesTypeMarkCheck(TrubIds);
+                                    modulePEX mPEX = new modulePEX();
+                                    //mPEX.PEXpipesReadExcel(out List<string> PEXPipeDiams, out List<string> PEXPipeMass, out List<string> PEXPipeArts, out List<string> PEXPipeMans, out List<string> PEXPipeTypes);
+                                    mPEX.PEXfitsReadExcel(out List<string> PEXFitCodes, out List<string> PEXFitArt1, out List<string> PEXFitArt2, out List<string> PEXFitArt3);
+                                    foreach (Element a in FitTrub)
+                                    {
+                                        bool success4 = true;
+                                        if (PEXmarkCheck) mPEX.PEXFitsSetParams(dateTime, TNovClassName, a.Id, PEXFitCodes, PEXFitArt1, PEXFitArt2, PEXFitArt3, out success4);
+                                        if (success4 == false) { failed4.Add(a.Id.ToString()); failscount++; continue; }
+                                    }
                                 }
                             }
-                        }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
 
-                        Logger.Log("Сантехника:", 1);
-                        if (Santeh.Count > 0 && viewModel.run14)
+                            Logger.Log("Сантехника:", 1);
+                            if (Santeh.Count > 0 && viewModel.run14)
+                            {
+                                foreach (Element a in Santeh)
+                                {
+                                    PBCount++;
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                    string param1 = parSanteh;
+                                    bool success1 = true;
+                                    if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
+                                    if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
+                                    bool success2 = true;
+                                    if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
+                                    if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
+                                }
+                            }
+                            else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
+
+
+
+                            if (runncat)
+                            {
+                                Logger.Log("Обобщенные модели:", 1);
+                                //обобщенные модели
+                                if (GMs.Count > 0)
+                                {
+                                    bool runCat1 = false;
+                                    foreach (Parameter p in GMs.First().ParametersMap)
+                                    {
+                                        if (p.IsShared)
+                                        {
+                                            if (p.GUID == NCatparamGuid) { runCat1 = true; break; }
+                                        }
+                                    }
+                                    if (GMs.Count > 0 && runCat1)
+                                    {
+                                        foreach (Element elem in GMs)
+                                        {
+                                            PBCount++;
+                                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                            try
+                                            {
+                                                elem.get_Parameter(NCatparamGuid)?.Set("6. Материалы и прочие элементы");
+                                                Logger.Log("   Элемент " + elem.Id.ToString() + ": N_Категория " + "6. Материалы и прочие элементы", 2);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Logger.Log("   Элемент " + elem.Id.ToString() + " Ошибка: " + ex.Message, 4);
+                                                failed2.Add(elem.Id.ToString()); failscount++;
+                                            }
+                                        }
+
+                                    }
+                                }
+
+                                Logger.Log("Несущая арматура:", 1);
+                                //несущая арматура
+                                if (rebar.Count > 0)
+                                {
+                                    bool runCat2 = false;
+                                    foreach (Parameter p in rebar.First().ParametersMap)
+                                    {
+                                        if (p.IsShared)
+                                        {
+                                            if (p.GUID == NCatparamGuid) { runCat2 = true; break; }
+                                        }
+                                    }
+                                    if (runCat2)
+                                    {
+                                        foreach (Element elem in rebar)
+                                        {
+                                            PBCount++;
+                                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                                            try
+                                            {
+                                                elem.get_Parameter(NCatparamGuid)?.Set("6. Материалы и прочие элементы");
+                                                Logger.Log("   Элемент " + elem.Id.ToString() + ": N_Категория " + "6. Материалы и прочие элементы", 2);
+                                            }
+                                            catch (Exception ex)
+                                            {
+                                                Logger.Log("   Элемент " + elem.Id.ToString() + " Ошибка: " + ex.Message, 4);
+                                                failed2.Add(elem.Id.ToString()); failscount++;
+                                            }
+                                        }
+
+                                    }
+                                }
+
+                            }
+
+                            transaction.Commit();
+                            Logger.Log("Закрываем транзакцию", 1);
+                        }
+                        catch (Exception ex)
                         {
-                            foreach (Element a in Santeh)
-                            {
-                                PBCount++;
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                string param1 = parSanteh;
-                                bool success1 = true;
-                                if (runadsk) success1 = MEPSpecTools.Setadskgparam(a.Id, param1, systemcut);
-                                if (!success1) { failed1.Add(a.Id.ToString()); failscount++; }
-                                bool success2 = true;
-                                if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
-                                if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
-                            }
+                            Logger.Log("Ошибка: " + ex.Message, 4);
                         }
-                        else { Logger.Log("ВЫКЛЮЧЕНО", 1); }
-
-
-
-                        if (runncat)
+                        finally
                         {
-                            Logger.Log("Обобщенные модели:", 1);
-                            //обобщенные модели
-                            if (GMs.Count > 0)
-                            {
-                                bool runCat1 = false;
-                                foreach (Parameter p in GMs.First().ParametersMap)
-                                {
-                                    if (p.IsShared)
-                                    {
-                                        if (p.GUID == NCatparamGuid) { runCat1 = true; break; }
-                                    }
-                                }
-                                if (GMs.Count > 0 && runCat1)
-                                {
-                                    foreach (Element elem in GMs)
-                                    {
-                                        PBCount++;
-                                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                        try
-                                        {
-                                            elem.get_Parameter(NCatparamGuid)?.Set("6. Материалы и прочие элементы");
-                                            Logger.Log("   Элемент " + elem.Id.ToString() + ": N_Категория " + "6. Материалы и прочие элементы", 2);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            Logger.Log("   Элемент " + elem.Id.ToString() + " Ошибка: " + ex.Message, 4);
-                                            failed2.Add(elem.Id.ToString()); failscount++;
-                                        }
-                                    }
-
-                                }
-                            }
-
-                            Logger.Log("Несущая арматура:", 1);
-                            //несущая арматура
-                            if (rebar.Count > 0)
-                            {
-                                bool runCat2 = false;
-                                foreach (Parameter p in rebar.First().ParametersMap)
-                                {
-                                    if (p.IsShared)
-                                    {
-                                        if (p.GUID == NCatparamGuid) { runCat2 = true; break; }
-                                    }
-                                }
-                                if (runCat2)
-                                {
-                                    foreach (Element elem in rebar)
-                                    {
-                                        PBCount++;
-                                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                                        this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                                        try
-                                        {
-                                            elem.get_Parameter(NCatparamGuid)?.Set("6. Материалы и прочие элементы");
-                                            Logger.Log("   Элемент " + elem.Id.ToString() + ": N_Категория " + "6. Материалы и прочие элементы", 2);
-                                        }
-                                        catch (Exception ex)
-                                        {
-                                            Logger.Log("   Элемент " + elem.Id.ToString() + " Ошибка: " + ex.Message, 4);
-                                            failed2.Add(elem.Id.ToString()); failscount++;
-                                        }
-                                    }
-
-                                }
-                            }
-
+                            CloseProgressBarSafely();
                         }
-
-                        transaction.Commit();
-                        this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() => this.adskgProgressBar.Close()));
-                        Logger.Log("Закрываем транзакцию", 1);
                     }
                 }
 
@@ -2465,5 +2505,21 @@ namespace TNovMEPSpec
             Logger.Log("Завершение работы.", 5);
             return Result.Succeeded;
         }
+        private void CloseProgressBarSafely()
+        {
+            if (adskgProgressBar != null &&
+                adskgProgressBar.Dispatcher != null &&
+                !adskgProgressBar.Dispatcher.HasShutdownStarted)
+            {
+                adskgProgressBar.Dispatcher.BeginInvoke(new System.Action(() =>
+                {
+                    if (adskgProgressBar.IsLoaded)
+                        adskgProgressBar.Close();
+                    // Завершаем цикл сообщений диспетчера, чтобы поток завершился
+                    Dispatcher.CurrentDispatcher.InvokeShutdown();
+                }));
+            }
+        }
+
     }
 }
