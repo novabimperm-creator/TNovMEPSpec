@@ -1261,19 +1261,6 @@ namespace TNovMEPSpec
                     return Result.Failed;
                 }
 
-                ViewSchedule targetSchedule = schedules.First();
-                //IList<ElementId> filteredElementIds = GetFilteredElementIdsFromSchedule(doc, targetSchedule);
-
-                FilteredElementCollector collector = new FilteredElementCollector(doc, targetSchedule.Id)
-    .WhereElementIsNotElementType()
-    .OfCategory(BuiltInCategory.OST_GenericAnnotation); // для типовых аннотаций
-
-                if (collector.Count() < 1 || collector == null) {Logger.Log("Типовых аннотаций в проекте не обнаружено!",4); return Result.Cancelled; }
-
-                List<ElementId> elementIds = collector.ToElementIds().ToList();
-
-                Logger.Log($"Найдено элементов: {elementIds.Count} : " + string.Join(", ", elementIds.Select(id => id.ToString())), 1);
-
                 // Создаем фильтр для категории "Обобщенные модели"
                 ElementCategoryFilter categoryFilter = new ElementCategoryFilter(BuiltInCategory.OST_GenericModel);
 
@@ -1304,12 +1291,48 @@ namespace TNovMEPSpec
                     }
                 }
 
-                if(targetElements.Count<1|| targetElements == null) 
-                { 
+                if (targetElements.Count < 1 || targetElements == null)
+                {
                     Logger.Log("Размещенных кубиков в проекте не обнаружено!", 4);
                     new InfoWindow280("В проекте не обнаружено кубиков с именем семейства pmN.Неспецифицируемый материал!").ShowDialog();
-                    return Result.Cancelled; 
+                    return Result.Cancelled;
                 }
+
+                ViewSchedule targetSchedule = schedules.First();
+                //IList<ElementId> filteredElementIds = GetFilteredElementIdsFromSchedule(doc, targetSchedule);
+
+                FilteredElementCollector collector = new FilteredElementCollector(doc, targetSchedule.Id)
+    .WhereElementIsNotElementType()
+    .OfCategory(BuiltInCategory.OST_GenericAnnotation); // для типовых аннотаций
+
+                if (collector.Count() < 1 || collector == null) 
+                {
+                    Logger.Log("Типовых аннотаций в проекте не обнаружено! Очищаем все кубики",1);
+                    for (int i = 0; i < targetElements.Count(); i++) //обнуляем элементы
+                    {
+                        Element targetElem = doc.GetElement(targetElements[i].Id);
+                        targetElem.get_Parameter(adskGparamGuid)?.Set("");//ADSK_Группирование
+                        targetElem.get_Parameter(adskNparamGuid)?.Set("");//ADSK_Наименование
+                        targetElem.get_Parameter(adskMarkparamGuid)?.Set("");//ADSK_Марка
+                                                                             //targetElem.get_Parameter(adskOboznparamGuid)?.Set("");//ADSK_Обозначение
+                        targetElem.get_Parameter(adskCodeparamGuid)?.Set("");//ADSK_Код изделия
+                        targetElem.get_Parameter(adskManufparamGuid)?.Set("");//ADSK_Завод-изготовитель
+                        targetElem.get_Parameter(adskEdparamGuid)?.Set("");//ADSK_Единица измерения
+                        targetElem.get_Parameter(adskCparamGuid)?.Set(0);//ADSK_Количество
+                        targetElem.get_Parameter(NEGparamGuid)?.Set("");//N_ЭЛ.Группирование ЭЛ
+                        targetElem.get_Parameter(NSortparamGuid)?.Set("");//N_Сортировка
+                        targetElem.get_Parameter(OSetparamGuid)?.Set("");//О_Комплект
+                        targetElem.get_Parameter(NCableWayparamGuid)?.Set("");
+                    }
+                    Logger.Log("Завершение работы.", 5);
+                    return Result.Succeeded; 
+                }
+
+                List<ElementId> elementIds = collector.ToElementIds().ToList();
+
+                Logger.Log($"Найдено элементов: {elementIds.Count} : " + string.Join(", ", elementIds.Select(id => id.ToString())), 1);
+
+                
 
                 //заполнение списка ElNonModelCube + проверка максимального колва
                 Logger.Log("Заполняем список ElNonModelCube", 1);
