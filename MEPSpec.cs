@@ -104,15 +104,10 @@ namespace TNovMEPSpec
             string docNameUserName = "_" + userName; docName = docName.Replace(docNameUserName, "");
             docName = docName.Replace(",", "");
             #endregion
-            #region Журнал
-            string TNovClassName = DBCommandName; 
-
-            //проверка подключения, запись в журнал
-            if(ServerUtils.CheckConnection(TNovClassName, TNovVersion)==false) return Result.Failed;
-            #endregion
+            TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
             #region Настройки логов
             // создание log - файла
-            Logger.Initialize(TNovClassName,dateTime,TNovVersion);
+            Logger.Initialize(DBCommandName,dateTime,TNovVersion);
 
             var viewModel0 = new AppVersionViewModel();
 
@@ -198,7 +193,7 @@ namespace TNovMEPSpec
 
                 // Десериализация
                 bool forProject = true;
-                string VMName = TNovClassName + "_СС";
+                string VMName = DBCommandName + "_СС";
                 json js = new json(in VMName, in forProject, out bool canserialize, out string jsonpath);
                 if (canserialize)
                 {
@@ -1234,7 +1229,7 @@ namespace TNovMEPSpec
                 {
                     Logger.Log("Открываем окно с ID проблемных элементов: " + String.Join(",", failed), 1);
                     // Диалоговое окно
-                    ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed),TNovClassName,dateTime,TNovVersion);
+                    ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed),DBCommandName,dateTime,TNovVersion);
                     window.Show();
                 }
 
@@ -1858,7 +1853,7 @@ namespace TNovMEPSpec
                 var viewModel = new MEPSpecOVVKViewModel();
                 // Десериализация
                 bool forProject = true;
-                json js = new json(in TNovClassName, in forProject, out bool canserialize, out string jsonpath);
+                json js = new json(in DBCommandName, in forProject, out bool canserialize, out string jsonpath);
                 if (canserialize)
                 {
                     viewModel = JsonConvert.DeserializeObject<MEPSpecOVVKViewModel>(File.ReadAllText(jsonpath));
@@ -2342,7 +2337,7 @@ namespace TNovMEPSpec
                                     foreach (Element a in FitTrub)
                                     {
                                         bool success4 = true;
-                                        if (PEXmarkCheck) mPEX.PEXFitsSetParams(dateTime, TNovClassName, a.Id, PEXFitCodes, PEXFitArt1, PEXFitArt2, PEXFitArt3, out success4);
+                                        if (PEXmarkCheck) mPEX.PEXFitsSetParams(dateTime, DBCommandName, a.Id, PEXFitCodes, PEXFitArt1, PEXFitArt2, PEXFitArt3, out success4);
                                         if (success4 == false) { failed4.Add(a.Id.ToString()); failscount++; continue; }
                                     }
                                 }
@@ -2500,7 +2495,7 @@ namespace TNovMEPSpec
                     Logger.Log(messageF, 1);
 
                     // Диалоговое окно
-                    ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed), TNovClassName, dateTime, TNovVersion);
+                    ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed), DBCommandName, dateTime, TNovVersion);
                     window.Show();
                 }
             }
