@@ -127,6 +127,8 @@ namespace TNovMEPSpec
             }
             #endregion
 
+            bool unhandledError = false;
+
             #region Выбор сценария
             //СЦЕНАРИЙ ВК ОВ / СС ПС / ЭЛ
             bool ss = false; bool el = false; bool vkov = false;
@@ -1614,6 +1616,8 @@ namespace TNovMEPSpec
                     catch (Exception ex)
                     {
                         Logger.Log("Ошибка: " + ex.Message, 4);
+                        new InfoWindow280("Ошибка: " + ex.Message).ShowDialog();
+                        unhandledError = true;
                     }
                     finally
                     {
@@ -2443,6 +2447,8 @@ namespace TNovMEPSpec
                         catch (Exception ex)
                         {
                             Logger.Log("Ошибка: " + ex.Message, 4);
+                            new InfoWindow280("Ошибка: " + ex.Message).ShowDialog();
+                            unhandledError = true;
                         }
                         finally
                         {
@@ -2505,6 +2511,11 @@ namespace TNovMEPSpec
                 new InfoWindow280("Плагин работает по разным сценариям в зависимости от раздела. Похоже, ваш файл не относится к" +
                 " разделу ВК/ПТ/ОВ/ЭЛ/СС. Раздел должен содержаться в имени модели.").ShowDialog();
                 Logger.Log("Раздел не является ВК/ПТ/ОВ/ЭЛ/СС. Завершение работы.", 3);
+            }
+            if (unhandledError)
+            {
+                Logger.Log("Завершение работы с ошибками.", 4);
+                return Result.Succeeded;
             }
             Logger.Log("Завершение работы.", 5);
             return Result.Succeeded;
