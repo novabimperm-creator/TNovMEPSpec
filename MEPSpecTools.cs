@@ -136,11 +136,19 @@ namespace TNovMEPSpec
             }
 
             string system = elem.LookupParameter(paramname).AsValueString(); //получаем значение исходного параметра
-            
+
             if (systemcut && system.Contains(","))
             {
                 string[] systemParts = system.Split(',');
-                system = systemParts[0];
+                bool systemK = false; //добавлено 05.2026 - каналья в приоритете
+                foreach (string systemPart in systemParts)
+                {
+                    if (systemPart.StartsWith("К"))
+                    {
+                        systemK = true; system = systemPart; break;
+                    }
+                }
+                if (!systemK) system = systemParts[0];
 
                 //добавлено 05.2026
                 int spaceIndex = system.IndexOf(' ');
@@ -150,9 +158,9 @@ namespace TNovMEPSpec
                     // Если в части до пробела есть хотя бы одна цифра – оставляем только её
                     if (prefix.Any(char.IsDigit))
                         system = prefix;
-                }  
+                }
             }
-                
+
             try
             {
                 elem.get_Parameter(adskGparamGuid)?.Set(system);
