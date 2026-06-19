@@ -361,29 +361,31 @@ namespace TNovMEPSpec
             switch (viewModel2.countPar)
             {
                 case "Число":
-                    countValue = 1;
+                    Logger.Log("число", 2); countValue = 1; Logger.Log("1", 2);
                     break;
                 case "Длина":
-                    Parameter paramL = elem.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH);
+                    Logger.Log("длина", 2); Parameter paramL = elem.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH);
                     if (paramL != null) countValue = paramL.AsDouble();
-                    countValue = countValue * 0.3048;
+                    countValue = countValue * 0.3048; Logger.Log($"{countValue}", 2);
                     break;
                 case "Площадь":
-                    Parameter paramA = elem.get_Parameter(BuiltInParameter.RBS_CURVE_SURFACE_AREA);
+                    Logger.Log("площадь", 2); Parameter paramA = elem.get_Parameter(BuiltInParameter.RBS_CURVE_SURFACE_AREA);
                     if (paramA != null) countValue = paramA.AsDouble();
-                    countValue = countValue * 0.3048 * 0.3048;
+                    countValue = countValue * 0.3048 * 0.3048; Logger.Log($"{countValue}", 2);
                     break;
                 case "Объем":
-                    Parameter paramV = elem.get_Parameter(BuiltInParameter.RBS_INSULATION_LINING_VOLUME);
+                    Logger.Log("объем", 2); Parameter paramV = elem.get_Parameter(BuiltInParameter.RBS_INSULATION_LINING_VOLUME);
                     if (paramV != null) countValue = paramV.AsDouble();
-                    countValue = countValue * 0.3048 * 0.3048 * 0.3048;
+                    countValue = countValue * 0.3048 * 0.3048 * 0.3048; Logger.Log($"{countValue}", 2);
                     break;
+                default:
+                    Logger.Log("viewModel2.countPar не распознан", 2);break;
             }
             double coeff = 1;
-            string vmk = viewModel2.countK.Replace('.', ',');
+            string vmk = viewModel2.countK.Replace('.', ','); Logger.Log("коэффициент "+vmk, 2);
             Double.TryParse(vmk, out coeff);
             countValue = countValue * coeff;
-            countValue = Math.Round(countValue, 1);
+            countValue = Math.Round(countValue, 1); Logger.Log($"итоговое колво {countValue}", 2);
 
             //заполнение параметров
             bool success1 = false;
@@ -458,6 +460,17 @@ namespace TNovMEPSpec
 
         }
 
+        public static bool IsIdParamSet(Element elem,string paramName)
+        {
+            if (Param.ParamExist(paramName, elem) == false) return false;
+            Parameter param = elem.LookupParameter(paramName);
+            if (param == null) return false;
+            if (param.HasValue==false) return false;
+            if (param.AsElementId() == null) return false;
+            if (param.AsElementId().IntegerValue==-1) return false;
+            return true;
+        }
+
     }
     public class ConduitCube
     {
@@ -482,6 +495,7 @@ namespace TNovMEPSpec
         public double adskC;
         public string OSet;
         public string NCableWay;
+        public string adskPrim;
     }
 
     public sealed class ElementInfo
@@ -499,6 +513,7 @@ namespace TNovMEPSpec
         public string Code { get; set; }
         public string Manuf { get; set; }
         public string Ed { get; set; }
+        public string AdskPrim {  get; set; }
     }
 
 }

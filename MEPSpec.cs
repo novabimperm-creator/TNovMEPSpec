@@ -46,6 +46,7 @@ namespace TNovMEPSpec
         Guid NSortparamGuid = new Guid("dbd21888-5efd-4e29-8722-2fe8c6d4f799");//N_Сортировка
         Guid OSetparamGuid = new Guid("8dd021be-382d-4776-afd4-75996e351de3");//О_Комплект
         Guid NCableWayparamGuid = new Guid("68ab5d53-15e9-4a30-817c-2fc7e15f8567");//N_ЭЛ.Способ прокладки кабеля
+        Guid adskPrimparamGuid = new Guid("a85b7661-26b0-412f-979c-66af80b4b2c3");//ADSK_Примечание
         string[] conduitStringParams = new string[]
         {
             "RBZ_Пучок1_Ед.измерения","RBZ_Пучок1_Марка","RBZ_Пучок1_Описание","RBZ_Пучок1_Производитель",
@@ -284,7 +285,101 @@ namespace TNovMEPSpec
                     group.Start();
 
                     //короба
+                    /*
+                    Logger.Log("Короба. Очищаем параметры со сброшенным ключом");
+                    using (Transaction transactionConduitPars = new Transaction(doc))
+                    {
+                        transactionConduitPars.Start("TNov - Сводная спека (короба чистка параметров)");
+                        Logger.Log("Открываем транзакцию 01", 1);
 
+                        foreach (var cond in Conduit)
+                        {
+                            Element c = doc.GetElement(cond.Id);
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 1") == false)
+                            {
+                                try
+                                {
+                                    if(c.LookupParameter("RBZ_Пучок1_Ед.измерения").IsReadOnly==false) c.LookupParameter("RBZ_Пучок1_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок1_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок1_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок1_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Производитель").Set("");
+                                }
+                                catch { }
+                            }
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 2") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Пучок2_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок2_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок2_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок2_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Производитель").Set("");
+                                }
+                                catch { }
+                            }
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 3") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Пучок3_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок3_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок3_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок3_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Производитель").Set("");
+                            }
+                                catch { }
+                        }
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 4") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Пучок4_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок4_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок4_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок4_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Производитель").Set("");
+                        }
+                                catch { }
+                    }
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 5") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Пучок5_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок5_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок5_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок5_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Производитель").Set("");
+                    }
+                                catch { }
+                }
+                            if (MEPSpecTools.IsIdParamSet(c, "Труба") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Труба_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Труба_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Труба_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Труба_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Производитель").Set("");
+                                    if (c.LookupParameter("RBZ_Труба_Артикул").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Артикул").Set("");
+                }
+                                catch { }
+            }
+                            if (MEPSpecTools.IsIdParamSet(c, "Крепеж") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Крепеж_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Крепеж_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Крепеж_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Крепеж_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Производитель").Set("");
+                                    if (c.LookupParameter("RBZ_Крепеж_Артикул").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Артикул").Set("");
+            }
+                                catch { }
+        }
+                        }
+
+                        Logger.Log("Закрываем транзакцию 1", 1);
+                        transactionConduitPars.Commit();
+                    }
+                    */
 
                     int allcount = elEq.Count + CableTrays.Count + CableTrayFittings.Count + ConduitTypes.Count + CableTrayTypes.Count + FireAlarmDevices.Count + ElectricalSystems.Count;
 
@@ -367,7 +462,12 @@ namespace TNovMEPSpec
                     Logger.Log("Формируем данные для кубиков", 1);
 
                     List<ConduitCube> cubes = new List<ConduitCube>();
-
+                    /*
+                    List<Conduit> Conduit1 = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Conduit)
+                                                                 .WhereElementIsNotElementType()
+                                                                 .Cast<Conduit>()
+                                                                 .ToList();
+                    */
                     foreach (var cType in ConduitTypes)
                     {
                         Logger.Log("   " + cType, 2);
@@ -423,7 +523,8 @@ namespace TNovMEPSpec
                             bool cParamExist = Param.ParamExist(conduitParam, firstElem);
                             if (cParamExist)
                             {
-                                bool hasValue = firstElem.LookupParameter(conduitParam).HasValue;
+                                Parameter prm = firstElem.LookupParameter(conduitParam);
+                                bool hasValue = prm.IsReadOnly&& prm.HasValue;
                                 if (hasValue)
                                 {
                                     string cParamValue = firstElem.LookupParameter(conduitParam).AsString();
@@ -636,11 +737,12 @@ namespace TNovMEPSpec
                             string esystemParam = esystemStringParams[i];
                             Logger.Log("   " + esystemParam, 2);
                             string value = "";
-                            //получаем значение текстового параметра с первого короба в списке коробов данного типа
+                            //получаем значение текстового параметра с цепи
                             bool cParamExist = Param.ParamExist(esystemParam, ElectricalSystem);
                             if (cParamExist)
                             {
-                                bool hasValue = ElectricalSystem.LookupParameter(esystemParam).HasValue;
+                                Parameter prm = ElectricalSystem.LookupParameter(esystemParam);
+                                bool hasValue = prm.IsReadOnly&& prm.HasValue;
                                 if (hasValue)
                                 {
                                     string cParamValue = ElectricalSystem.LookupParameter(esystemParam).AsString();
@@ -894,7 +996,8 @@ namespace TNovMEPSpec
                             bool cParamExist = Param.ParamExist(conduitParam, firstElem);
                             if (cParamExist)
                             {
-                                bool hasValue = firstElem.LookupParameter(conduitParam).HasValue;
+                                Parameter prm = firstElem.LookupParameter(conduitParam);
+                                bool hasValue = prm.IsReadOnly && prm.HasValue;
                                 if (hasValue)
                                 {
                                     string cParamValue = firstElem.LookupParameter(conduitParam).AsString();
@@ -1320,6 +1423,7 @@ namespace TNovMEPSpec
                         targetElem.get_Parameter(NSortparamGuid)?.Set("");//N_Сортировка
                         targetElem.get_Parameter(OSetparamGuid)?.Set("");//О_Комплект
                         targetElem.get_Parameter(NCableWayparamGuid)?.Set("");
+                        targetElem.get_Parameter(adskPrimparamGuid)?.Set("");
                     }
                     Logger.Log("Завершение работы.", 5);
                     return Result.Succeeded; 
@@ -1349,7 +1453,7 @@ namespace TNovMEPSpec
                         AdskNaim = Param.GetStringParamValue(doc,adskNparamGuid,elem),
                         Mark = Param.GetStringParamValue(doc, adskMarkparamGuid, elem),
                         Neg = Param.GetStringParamValue(doc, NEGparamGuid, elem),
-                        OSet = Param.GetStringParamValue(doc, OSetparamGuid, elem), // можно тоже закэшировать
+                        OSet = Param.GetStringParamValue(doc, OSetparamGuid, elem), 
                         Count = Param.GetDoubleParamValue(doc, adskCparamGuid, elem),
                         NCableWay = Param.GetStringParamValue(doc, NCableWayparamGuid,elem),
                         AdskGroup = Param.GetStringParamValue(doc, adskGparamGuid, elem),
@@ -1357,7 +1461,8 @@ namespace TNovMEPSpec
                         Obozn = Param.GetStringParamValue(doc,adskOboznparamGuid, elem),
                         Code = Param.GetStringParamValue(doc, adskCodeparamGuid, elem),
                         Manuf = Param.GetStringParamValue(doc, adskManufparamGuid, elem),
-                        Ed = Param.GetStringParamValue(doc,adskEdparamGuid, elem)
+                        Ed = Param.GetStringParamValue(doc,adskEdparamGuid, elem),
+                        AdskPrim = Param.GetStringParamValue(doc, adskPrimparamGuid,elem)
                     });
                 }
 
@@ -1394,7 +1499,15 @@ namespace TNovMEPSpec
                                                         SubGroups = g5
                                                             .GroupBy(e => e.NCableWay)   // <-- новый уровень 05/26
                                                             .OrderBy(g => g.Key)
-                                                            .Select(g6 => new { g6.Key, Elements = g6.ToList() })
+                                                            .Select(g6 => new
+                                                            {
+                                                                g6.Key,
+                                                                SubGroups = g6
+                                                                    .GroupBy(e => e.AdskPrim)   // <-- новый уровень 06/26
+                                                                    .OrderBy(g => g.Key)
+                                                                    .Select(g7 => new
+                                                                    { g7.Key, Elements = g7.ToList() })
+                                                            })
                                                     })
                                             })
                                     })
@@ -1406,139 +1519,39 @@ namespace TNovMEPSpec
                     foreach (var g2 in g1.SubGroups)
                         foreach (var g3 in g2.SubGroups)
                             foreach (var g4 in g3.SubGroups)
-                                foreach (var g5 in g4.SubGroups)
+                                foreach (var g5 in g4.SubGroups) 
                                     foreach (var g6 in g5.SubGroups)
-                                    {
-                                    var firstElem = g6.Elements.First();
+                                        foreach (var g7 in g6.SubGroups)
+                                        {
+                                        var firstElem = g7.Elements.First();
 
-                                    double totalCount = g6.Elements.Sum(e => e.Count);
+                                        double totalCount = g7.Elements.Sum(e => e.Count);
 
-                                    string naim = firstElem.AdskNaim;
-                                    string mrk = firstElem.Mark;
-                                    if (mrk.Contains("ВВГ")) naim = naim.Replace(".", ",");
+                                        string naim = firstElem.AdskNaim;
+                                        string mrk = firstElem.Mark;
+                                        if (mrk.Contains("ВВГ")) naim = naim.Replace(".", ",");
 
-                                    elCubes.Add(new ElNonModelCube
-                                    {
-                                        adskGroup = firstElem.AdskGroup,
-                                        adskNaim = naim,
-                                        adskMark = mrk,
-                                        adskObozn = firstElem.Obozn,
-                                        adskCode = firstElem.Code,
-                                        adskManuf = firstElem.Manuf,
-                                        adskEd = firstElem.Ed,
-                                        NEGroup = firstElem.Neg,
-                                        NSort = firstElem.NSort,
-                                        OSet = firstElem.OSet,
-                                        NCableWay = firstElem.NCableWay,
-                                        adskC = totalCount
-                                    });
+                                        elCubes.Add(new ElNonModelCube
+                                        {
+                                            adskGroup = firstElem.AdskGroup,
+                                            adskNaim = naim,
+                                            adskMark = mrk,
+                                            adskObozn = firstElem.Obozn,
+                                            adskCode = firstElem.Code,
+                                            adskManuf = firstElem.Manuf,
+                                            adskEd = firstElem.Ed,
+                                            NEGroup = firstElem.Neg,
+                                            NSort = firstElem.NSort,
+                                            OSet = firstElem.OSet,
+                                            NCableWay = firstElem.NCableWay,
+                                            adskC = totalCount,
+                                            adskPrim = firstElem.AdskPrim,
+                                        });
 
                                     Logger.Log($"№ {gmCounter++} : ...", 2);
                                 }
 
-                //устаревший код
-                /*
-                // Сортировка 1 - ADSK_Группирование (по типу)
-                var elemsSortByGroup = from i in collector
-                                       let type = doc.GetElement(i.GetTypeId()) //as ElementType
-                                       let paramValue = type?.get_Parameter(adskGparamGuid)?.AsString() ?? ""
-                                       orderby paramValue
-                                       select i;
-                var adskGgroups = from i in elemsSortByGroup
-                                  let type = doc.GetElement(i.GetTypeId()) //as ElementType
-                                  let paramValue = type?.get_Parameter(adskGparamGuid)?.AsString() ?? ""
-                                  group i by paramValue;
-                foreach (var adskGgroup in adskGgroups)
-                {
-                    //тип первого элемента
-                    Element firstElemType = doc.GetElement(adskGgroup.First().GetTypeId());
-                    Logger.Log("1 : "+firstElemType.get_Parameter(adskGparamGuid)?.AsString(), 2);
-                    // Сортировка 2 - N_ЭЛ. Группирование ЭЛ
-                    var elemsSortByEGroup = from i in adskGgroup
-                                            orderby i.get_Parameter(NEGparamGuid)?.AsString() ?? ""
-                                            select i;
-                    var NEGgroups = from i in elemsSortByEGroup
-                                    group i by i.get_Parameter(NEGparamGuid)?.AsString() ?? "";
-                    foreach (var NEGgroup in NEGgroups)
-                    {
-                        //тип первого элемента
-                        Element firstElem2 = doc.GetElement(NEGgroup.First().Id);
-                        Logger.Log("2 : "+firstElem2.get_Parameter(NEGparamGuid)?.AsString(), 2);
-                        // Сортировка 3 - N_Сортировка (по типу)
-                        var elemsSortByNSort = from i in NEGgroup
-                                               let type = doc.GetElement(i.GetTypeId()) //as ElementType
-                                               let paramValue = type?.get_Parameter(NSortparamGuid)?.AsString() ?? ""
-                                               orderby paramValue descending //обратная
-                                               select i;
-                        var Nsortgroups = from i in elemsSortByNSort
-                                          let type = doc.GetElement(i.GetTypeId()) //as ElementType
-                                          let paramValue = type?.get_Parameter(NSortparamGuid)?.AsString() ?? ""
-                                          group i by paramValue;
-                        foreach (var Nsortgroup in Nsortgroups)
-                        {
-                            //тип первого элемента
-                            Element firstElemType3 = doc.GetElement(Nsortgroup.First().GetTypeId());
-                            Logger.Log("3 : " + firstElemType3.get_Parameter(NSortparamGuid)?.AsString(), 2);
-                            // Сортировка 4 - ADSK_Наименование 
-                            var elemsSortByNaim = from i in Nsortgroup
-                                                  orderby i.get_Parameter(adskNparamGuid)?.AsString() ?? ""
-                                                  select i;
-                            var adskNgroups = from i in elemsSortByNaim
-                                              group i by i.get_Parameter(adskNparamGuid)?.AsString() ?? "";
-
-                            foreach (var adskNgroup in adskNgroups)
-                            {
-                                Element firstElem4 = adskNgroup.First();
-                                Element firstElementType4 = doc.GetElement(firstElem4.GetTypeId());
-                                Logger.Log("4 : " + firstElem4.get_Parameter(adskNparamGuid)?.AsString(), 2);
-                                // Сортировка 5 - О_Комплект - ДОБАВЛЕНА 04.2026
-                                var elemsSortByOSet = from i in adskNgroup
-                                                      orderby Param.GetStringParamValue(doc, OSetparamGuid, i)
-                                                      select i;
-                                var oSetgroups = from i in elemsSortByOSet
-                                                 group i by Param.GetStringParamValue(doc, OSetparamGuid, i);
-
-                                foreach(var oSetgroup in oSetgroups)
-                                {
-                                    double oSetgroupCount = 0;
-                                    foreach (var elem in oSetgroup)
-                                    {
-                                        oSetgroupCount += elem.get_Parameter(adskCparamGuid)?.AsDouble() ?? 0;
-                                    }
-                                    Element firstElem = oSetgroup.First();
-                                    Logger.Log("5 : " + Param.GetStringParamValue(doc, OSetparamGuid, firstElem), 2);
-                                    string naim = firstElem.get_Parameter(adskNparamGuid)?.AsString() ?? "";
-                                    string mrk = firstElem.get_Parameter(adskMarkparamGuid)?.AsString() ?? "";
-                                    if (mrk.Contains("ВВГ")) naim = naim.Replace(".", ",");
-
-                                    ElNonModelCube elCube = new ElNonModelCube
-                                    {
-                                        adskGroup = Param.GetStringParamValue(doc, adskGparamGuid, firstElem),
-                                        adskNaim = naim,
-                                        adskMark = Param.GetStringParamValue(doc, adskMarkparamGuid, firstElem),
-                                        adskObozn = Param.GetStringParamValue(doc, adskOboznparamGuid, firstElem),
-                                        adskCode = Param.GetStringParamValue(doc, adskCodeparamGuid, firstElem),
-                                        adskManuf = Param.GetStringParamValue(doc, adskManufparamGuid, firstElem),
-                                        adskEd = Param.GetStringParamValue(doc, adskEdparamGuid, firstElem),
-                                        NEGroup = Param.GetStringParamValue(doc, NEGparamGuid, firstElem),
-                                        NSort = Param.GetStringParamValue(doc, NSortparamGuid, firstElem),
-                                        OSet = Param.GetStringParamValue(doc, OSetparamGuid, firstElem),
-                                        adskC = oSetgroupCount,
-                                    };
-                                    Logger.Log("№ " + gmCounter.ToString() + " : " + elCube.adskGroup + " " + elCube.NEGroup + " " + elCube.NSort + " " + elCube.adskNaim + " " + elCube.adskMark + " " + elCube.adskObozn +
-                                        " " + elCube.adskCode + " " + elCube.adskEd + " " + elCube.adskC.ToString(), 2);
-                                    elCubes.Add(elCube);
-
-                                    gmCounter++;
-                                }
-
-                                
-                            }
-                        }
-                    }
-                }
-                */
-
+                
 
                 if (gmCounter > targetElements.Count())
                 {
@@ -1586,6 +1599,7 @@ namespace TNovMEPSpec
                             targetElem.get_Parameter(NSortparamGuid)?.Set(elCubes[i].NSort);//N_Сортировка
                             targetElem.get_Parameter(OSetparamGuid)?.Set(elCubes[i].OSet);//О_Комплект
                             targetElem.get_Parameter(NCableWayparamGuid)?.Set(elCubes[i].NCableWay);
+                            targetElem.get_Parameter(adskPrimparamGuid)?.Set(elCubes[i].adskPrim);
 
                             PBCount++;
                             this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
@@ -1608,6 +1622,7 @@ namespace TNovMEPSpec
                             targetElem.get_Parameter(NSortparamGuid)?.Set("");//N_Сортировка
                             targetElem.get_Parameter(OSetparamGuid)?.Set("");//О_Комплект
                             targetElem.get_Parameter(NCableWayparamGuid)?.Set("");
+                            targetElem.get_Parameter(adskPrimparamGuid)?.Set("");
                         }
 
                         Logger.Log("Закрываем транзакцию", 1);
@@ -1947,41 +1962,42 @@ namespace TNovMEPSpec
                     GMs = GMs.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
                     rebar = rebar.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
                 }
-
-                //проверка Excel
-                Microsoft.Office.Interop.Excel.Application xlApp = null;
-                Workbooks workbooks = null;
-                Workbook wb0 = null;
-                try
+                if (viewModel.runCatalogs || viewModel.runNonModel)
                 {
-                    xlApp = new Microsoft.Office.Interop.Excel.Application();
-                    // проверка установлен ли Excel
-                    if (xlApp == null)
+                    //проверка Excel
+                    Microsoft.Office.Interop.Excel.Application xlApp = null;
+                    Workbooks workbooks = null;
+                    Workbook wb0 = null;
+                    try
                     {
-                        string info2txt = "Ошибка! MS Excel не установлен на данном компьютере.";
-                        var info2 = new InfoWindow280(info2txt); info2.ShowDialog();
-                        Logger.Log("MS Excel не установлен на данном компьютере.", 4);
+                        xlApp = new Microsoft.Office.Interop.Excel.Application();
+                        // проверка установлен ли Excel
+                        if (xlApp == null)
+                        {
+                            string info2txt = "Ошибка! MS Excel не установлен на данном компьютере.";
+                            var info2 = new InfoWindow280(info2txt); info2.ShowDialog();
+                            Logger.Log("MS Excel не установлен на данном компьютере.", 4);
+                        }
+                        workbooks = xlApp.Workbooks;
+                        wb0 = workbooks.Open("//fs-nova/NOVA/04_БИБЛИОТЕКА/BIM/ВК_ОВ_Семейства/_TNov/VM_PEX_Спецификация труб.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
                     }
-                    workbooks = xlApp.Workbooks;
-                    wb0 = workbooks.Open("//fs-nova/NOVA/04_БИБЛИОТЕКА/BIM/ВК_ОВ_Семейства/_TNov/VM_PEX_Спецификация труб.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
+                    catch (Exception e)
+                    {
+                        string info2txt = "Ошибка! Имеются неполадки в работе MS Excel на данном компьютере. " +
+                            "Перезапустите плагин без галочек Обрабатывать каталоги и Построить немоделируемые." +
+                            "Этот функционал доступен только при нормальной работе Excel.";
+                        var info2 = new InfoWindow280(info2txt); info2.ShowDialog();
+                        Logger.Log(e.Message, 4);
+                    }
+                    finally
+                    {
+                        wb0.Close();
+                        xlApp.Quit();
+                        Marshal.ReleaseComObject(wb0);
+                        Marshal.ReleaseComObject(workbooks);
+                        Marshal.ReleaseComObject(xlApp);
+                    }
                 }
-                catch (Exception e)
-                {
-                    string info2txt = "Ошибка! Имеются неполадки в работе MS Excel на данном компьютере. " +
-                        "Перезапустите плагин без галочек Обрабатывать каталоги и Построить немоделируемые." +
-                        "Этот функционал доступен только при нормальной работе Excel.";
-                    var info2 = new InfoWindow280(info2txt); info2.ShowDialog();
-                    Logger.Log(e.Message, 4);
-                }
-                finally
-                {
-                    wb0.Close();
-                    xlApp.Quit();
-                    Marshal.ReleaseComObject(wb0);
-                    Marshal.ReleaseComObject(workbooks);
-                    Marshal.ReleaseComObject(xlApp);
-                }
-
                 //переменные запусков
                 bool runadsk = viewModel.runadskg;
                 bool runadskp = viewModel.runadskp;

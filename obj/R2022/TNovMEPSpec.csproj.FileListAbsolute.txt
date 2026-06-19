@@ -1,0 +1,16 @@
+\\fs-nova\Distr\0.For Admin\_TNov\build\2022\TNovMEPSpec.dll.config
+\\fs-nova\Distr\0.For Admin\_TNov\build\2022\TNovMEPSpec.dll
+\\fs-nova\Distr\0.For Admin\_TNov\build\2022\TNovMEPSpec.pdb
+Z:\DEV\TNovMEPSpec\obj\R2022\TNovMEPSpec.csproj.AssemblyReference.cache
+Z:\DEV\TNovMEPSpec\obj\R2022\MEPSpecOVVKParamsWPF.g.cs
+Z:\DEV\TNovMEPSpec\obj\R2022\MEPSpecOVVKWPF.g.cs
+Z:\DEV\TNovMEPSpec\obj\R2022\MEPSpecSSWPF.g.cs
+Z:\DEV\TNovMEPSpec\obj\R2022\TNovMEPSpec_MarkupCompile.cache
+Z:\DEV\TNovMEPSpec\obj\R2022\TNovMEPSpec_MarkupCompile.lref
+Z:\DEV\TNovMEPSpec\obj\R2022\MEPSpecOVVKParamsWPF.baml
+Z:\DEV\TNovMEPSpec\obj\R2022\MEPSpecOVVKWPF.baml
+Z:\DEV\TNovMEPSpec\obj\R2022\MEPSpecSSWPF.baml
+Z:\DEV\TNovMEPSpec\obj\R2022\TNovMEPSpec.g.resources
+Z:\DEV\TNovMEPSpec\obj\R2022\TNovMEPSpec.csproj.CoreCompileInputs.cache
+Z:\DEV\TNovMEPSpec\obj\R2022\TNovMEPSpec.dll
+Z:\DEV\TNovMEPSpec\obj\R2022\TNovMEPSpec.pdb
