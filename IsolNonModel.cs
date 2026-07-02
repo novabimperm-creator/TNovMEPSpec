@@ -8,6 +8,7 @@ using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Structure;
 using Microsoft.Office.Interop.Excel;
 using TNovCommon;
+using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace TNovMEPSpec
 {

@@ -2,6 +2,7 @@
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -382,10 +383,17 @@ namespace TNovMEPSpec
                     Logger.Log("viewModel2.countPar не распознан", 2);break;
             }
             double coeff = 1;
-            string vmk = viewModel2.countK.Replace('.', ','); Logger.Log("коэффициент "+vmk, 2);
-            Double.TryParse(vmk, out coeff);
+            string vmk = viewModel2.countK; // без замены
+            if (double.TryParse(vmk, NumberStyles.Any, CultureInfo.InvariantCulture, out coeff))
+            {
+                // парсинг успешен
+            }
+            else
+            {
+                Logger.Log($"Не удалось распарсить коэффициент: {vmk}", 2);
+            }
             countValue = countValue * coeff;
-            countValue = Math.Round(countValue, 1); Logger.Log($"итоговое колво {countValue}", 2);
+            countValue = Math.Round(countValue, 1); Logger.Log($"итоговое колво {countValue.ToString(CultureInfo.InvariantCulture)}", 2);
 
             //заполнение параметров
             bool success1 = false;
@@ -467,7 +475,11 @@ namespace TNovMEPSpec
             if (param == null) return false;
             if (param.HasValue==false) return false;
             if (param.AsElementId() == null) return false;
+#if R2022
             if (param.AsElementId().IntegerValue==-1) return false;
+#else
+            if (param.AsElementId().Value == -1) return false;
+#endif
             return true;
         }
 

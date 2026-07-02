@@ -250,6 +250,7 @@ namespace TNovMEPSpec
                 List<string> CableTrayTypes = new List<string>();
                 foreach (var c in CableTrays)
                 {
+#if R2022
                     string cType =
                         c.get_Parameter(adskGparamGuid).AsString() +
                         c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
@@ -257,6 +258,15 @@ namespace TNovMEPSpec
                         c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
                         c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
                         c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
+#else
+                    string cType =
+                        c.get_Parameter(adskGparamGuid).AsString() +
+                        c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
+#endif
                     CableTrayTypes.Add(cType);
                 }
                 CableTrayTypes = CableTrayTypes.Distinct().ToList();
@@ -266,6 +276,7 @@ namespace TNovMEPSpec
                 List<string> ConduitTypes = new List<string>();
                 foreach (var c in Conduit)
                 {
+#if R2022
                     string cType =
                         c.get_Parameter(adskGparamGuid).AsString() +
                         c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
@@ -275,6 +286,17 @@ namespace TNovMEPSpec
                         c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
                         c.LookupParameter("Труба").AsElementId().IntegerValue.ToString() +
                         c.LookupParameter("Крепеж").AsElementId().IntegerValue.ToString();
+#else
+                    string cType =
+                        c.get_Parameter(adskGparamGuid).AsString() +
+                        c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
+                        c.LookupParameter("Труба").AsElementId().Value.ToString() +
+                        c.LookupParameter("Крепеж").AsElementId().Value.ToString();
+#endif
                     ConduitTypes.Add(cType);
                 }
                 ConduitTypes = ConduitTypes.Distinct().ToList();
@@ -420,7 +442,11 @@ namespace TNovMEPSpec
                                 e.LookupParameter("Короб_Кабель_5_Количество")?.Set(0);
                                 e.LookupParameter("Короб_Крепеж_Количество")?.Set(0);
                                 e.LookupParameter("Короб_Труба_Количество")?.Set(0);
+#if R2022
                                 cubeId = GM0.Id.IntegerValue;
+#else
+                                cubeId = (int)GM0.Id.Value;
+#endif
                                 Logger.Log("   Первый кубик найден и обработан", 2);
                             }
                             if (j > 1) GMsToRemove.Add(GM0.Id); //последующие кубики данного типа - в список на удаление
@@ -475,6 +501,7 @@ namespace TNovMEPSpec
                         List<Element> cTypeElems = new List<Element>(); //пустой список коробов
                         foreach (var c in Conduit)
                         {
+#if R2022
                             string cType1 =
                         c.get_Parameter(adskGparamGuid).AsString() +
                         c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
@@ -484,6 +511,17 @@ namespace TNovMEPSpec
                         c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
                         c.LookupParameter("Труба").AsElementId().IntegerValue.ToString() +
                         c.LookupParameter("Крепеж").AsElementId().IntegerValue.ToString();
+#else
+                            string cType1 =
+                        c.get_Parameter(adskGparamGuid).AsString() +
+                        c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
+                        c.LookupParameter("Труба").AsElementId().Value.ToString() +
+                        c.LookupParameter("Крепеж").AsElementId().Value.ToString();
+#endif
                             if (cType1 == cType)
                             {
                                 cTypeElems.Add(doc.GetElement(c.Id));
@@ -682,7 +720,11 @@ namespace TNovMEPSpec
                                 e.LookupParameter("Цепь_Кабель_Количество")?.Set(0);
                                 e.LookupParameter("Цепь_Крепеж_Количество")?.Set(0);
                                 e.LookupParameter("Цепь_Труба_Количество")?.Set(0);
+#if R2022
                                 cubeId2 = GM0.Id.IntegerValue;
+#else
+                                cubeId2 = (int)GM0.Id.Value;
+#endif
                                 Logger.Log("   Первый кубик найден и обработан", 2);
                             }
                             if (j2 > 1) GMsToRemove2.Add(GM0.Id); //последующие кубики данного типа - в список на удаление
@@ -727,8 +769,11 @@ namespace TNovMEPSpec
 
                     foreach (var ElectricalSystem in ElectricalSystems)
                     {
+#if R2022
                         Logger.Log("   " + ElectricalSystem.Id.IntegerValue.ToString(), 2);
-
+#else
+                        Logger.Log("   " + ElectricalSystem.Id.Value.ToString(), 2);
+#endif
                         List<string> stringValues = new List<string>();
                         List<double> doubleValues = new List<double>();
                         string gvalue = "";
@@ -808,7 +853,11 @@ namespace TNovMEPSpec
 
                         cubes2.Add(new ConduitCube
                         {
+#if R2022
                             Name = ElectricalSystem.Id.IntegerValue.ToString(),
+#else
+                            Name = ElectricalSystem.Id.Value.ToString(),
+#endif
                             StringValues = stringValues,
                             DoubleValues = doubleValues,
                             ADSKGroup = gvalue
@@ -899,7 +948,11 @@ namespace TNovMEPSpec
                                 e.LookupParameter("Лоток_Кабель_3_Количество")?.Set(0);
                                 e.LookupParameter("Лоток_Кабель_4_Количество")?.Set(0);
                                 e.LookupParameter("Лоток_Кабель_5_Количество")?.Set(0);
+#if R2022
                                 cubeId3 = GM0.Id.IntegerValue;
+#else
+                                cubeId3 = (int)GM0.Id.Value;
+#endif
                                 Logger.Log("   Первый кубик найден и обработан", 2);
                             }
                             if (k > 1) GMsToRemove3.Add(GM0.Id); //последующие кубики данного типа - в список на удаление
@@ -949,13 +1002,23 @@ namespace TNovMEPSpec
                         List<Element> cTypeElems = new List<Element>(); //пустой список лотков
                         foreach (var c in CableTrays)
                         {
-                            string cType1 =
+#if R2022
+                    string cType1 =
                         c.get_Parameter(adskGparamGuid).AsString() +
                         c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
                         c.LookupParameter("Кабель тип 2").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
                         c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
                         c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
                         c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
+#else
+                            string cType1 =
+                                c.get_Parameter(adskGparamGuid).AsString() +
+                                c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                                c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                                c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                                c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                                c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
+#endif
 
                             if (cType1 == cType)
                             {
@@ -1118,7 +1181,11 @@ namespace TNovMEPSpec
                         transactionCT.Start("TNov - Сводная спека Лотки");
                         foreach (var elem in CTelems)
                         {
-                            Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
+#if R2022
+                        Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
+#else
+                            Logger.Log("   " + elem.Id.Value.ToString(), 2);
+#endif
                             Element type = RevitAPI.Document.GetElement(elem.GetTypeId());
 
                             //вычисление Наименования и Марки
@@ -1245,8 +1312,11 @@ namespace TNovMEPSpec
                                 }
                             }
                             success = success1 && success2;
+#if R2022
                             if (!success) { failed.Add(elem.Id.IntegerValue.ToString()); failscount++; }
-
+#else
+                            if (!success) { failed.Add(elem.Id.Value.ToString()); failscount++; }
+#endif
                             PBCount++;
                             this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
                             this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
@@ -1267,7 +1337,11 @@ namespace TNovMEPSpec
                         transactionSS.Start("TNov - Сводная спека Оборудование");
                         foreach (var elem in SSelems)
                         {
-                            Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
+#if R2022
+                        Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
+#else
+                            Logger.Log("   " + elem.Id.Value.ToString(), 2);
+#endif
                             Element type = RevitAPI.Document.GetElement(elem.GetTypeId());
 
                             //заполнение параметров
@@ -1308,7 +1382,11 @@ namespace TNovMEPSpec
                                     }
                                 }
                             }
+#if R2022
                             if (!success) { failed.Add(elem.Id.IntegerValue.ToString()); failscount++; }
+#else
+                            if (!success) { failed.Add(elem.Id.Value.ToString()); failscount++; }
+#endif
 
                             PBCount++;
                             this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
@@ -1340,20 +1418,28 @@ namespace TNovMEPSpec
 
 
             }
-            #endregion
+#endregion
             #region ЭЛ
             else if (el)
             {
                 // ЭЛ
-                
+
                 // Найти все спецификации категории "Типовые аннотации"
+#if R2022
                 List<ViewSchedule> schedules = new FilteredElementCollector(doc)
                     .OfClass(typeof(ViewSchedule))
                     .Cast<ViewSchedule>()
                     .Where(s => s.Definition.CategoryId.IntegerValue == (int)BuiltInCategory.OST_GenericAnnotation)
                     .Where(s => s.Name.Equals(TargetScheduleName))
                     .ToList();
-
+#else
+                List<ViewSchedule> schedules = new FilteredElementCollector(doc)
+                    .OfClass(typeof(ViewSchedule))
+                    .Cast<ViewSchedule>()
+                    .Where(s => s.Definition.CategoryId.Value == (int)BuiltInCategory.OST_GenericAnnotation)
+                    .Where(s => s.Name.Equals(TargetScheduleName))
+                    .ToList();
+#endif
                 if (schedules.Count == 0)
                 {
                     new InfoWindow280($"Спецификация с именем '{TargetScheduleName}' не найдена.").ShowDialog();
@@ -1640,7 +1726,7 @@ namespace TNovMEPSpec
                     }
                 }
             }
-            #endregion
+#endregion
             #region ВК ОВ
             else if (vkov)
             {
@@ -1924,7 +2010,14 @@ namespace TNovMEPSpec
                     ICollection<ElementId> preselectedIds = selection.GetElementIds();
                     if (preselectedIds.Count > 0)
                     {
-                        foreach (ElementId id in preselectedIds) { selectedIds.Add(id.IntegerValue); }
+                        foreach (ElementId id in preselectedIds) 
+                        {
+#if R2022
+                            selectedIds.Add(id.IntegerValue); 
+#else
+                            selectedIds.Add((int)id.Value);
+#endif
+                        }
                     }
                     else //запускаем выбор элементов если ничего не выбрано
                     {
@@ -1942,9 +2035,16 @@ namespace TNovMEPSpec
                             Logger.Log("Запуск отменен пользователем. Завершение работы: " + e.Message, 3);
                             return Result.Cancelled;
                         }
-                        foreach (Element element in selectedElements) selectedIds.Add(element.Id.IntegerValue);
+                        foreach (Element element in selectedElements) 
+                        {
+#if R2022
+                            selectedIds.Add(element.Id.IntegerValue); 
+#else
+                            selectedIds.Add((int)element.Id.Value);
+#endif
+                        }
                     }
-
+#if R2022
                     ArmVozd = ArmVozd.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
                     Vozdrasp = Vozdrasp.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
                     GibkVozd = GibkVozd.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
@@ -1961,6 +2061,24 @@ namespace TNovMEPSpec
                     Santeh = Santeh.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
                     GMs = GMs.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
                     rebar = rebar.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
+#else
+                    ArmVozd = ArmVozd.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    Vozdrasp = Vozdrasp.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    GibkVozd = GibkVozd.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    VnIsolVozd = VnIsolVozd.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    Vozd = Vozd.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    IsolVozd = IsolVozd.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    FitVozd = FitVozd.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    Obor = Obor.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    ArmTrub = ArmTrub.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    GibkTrub = GibkTrub.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    Trub = Trub.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    IsolTrub = IsolTrub.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    FitTrub = FitTrub.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    Santeh = Santeh.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    GMs = GMs.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+                    rebar = rebar.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
+#endif
                 }
                 if (viewModel.runCatalogs || viewModel.runNonModel)
                 {
@@ -2521,7 +2639,7 @@ namespace TNovMEPSpec
                     window.Show();
                 }
             }
-            #endregion
+#endregion
             else
             {
                 new InfoWindow280("Плагин работает по разным сценариям в зависимости от раздела. Похоже, ваш файл не относится к" +

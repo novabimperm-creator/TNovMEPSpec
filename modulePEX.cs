@@ -11,6 +11,7 @@ using Microsoft.Office.Interop.Excel;
 using Parameter = Autodesk.Revit.DB.Parameter;
 using System.Data.Common;
 using System.Runtime.InteropServices;
+using Range = Microsoft.Office.Interop.Excel.Range;
 
 namespace TNovMEPSpec
 {
