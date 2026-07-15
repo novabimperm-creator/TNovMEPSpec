@@ -2,7 +2,7 @@
 using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
+using System.Windows.Input;
 using System.Windows.Navigation;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.UI;
@@ -50,12 +50,28 @@ namespace TNovMEPSpec
                 string groupnametxt = group.Replace(categorytoreplace, "");
 
                 StackPanel sp = new StackPanel(); sp.Orientation = Orientation.Horizontal; sp.HorizontalAlignment = HorizontalAlignment.Left;
-                sp.Width = 170;
-                
+                sp.Width = 196;
+
                 var btn = new Button
-                { Content = new TextBlock() { Text = groupnametxt, TextWrapping = TextWrapping.Wrap }, 
-                    Width = 150, MinHeight = 25, Margin = new Thickness(5, 5, 5, 5), VerticalAlignment = VerticalAlignment.Center, 
-                    Tag = viewModel.fileName+"="+group};
+                {
+                    Content = new TextBlock()
+                    {
+                        Text = groupnametxt,
+                        TextWrapping = TextWrapping.Wrap,
+                        FontSize = 11,
+                        Style = (Style)FindResource("CardTitleStyle")
+                    },
+                    Style = (Style)FindResource("CloseButtonStyle"),
+                    Width = 173,
+                    MinHeight = 22,
+                    Padding = new Thickness(6, 1, 6, 1),
+                    Margin = new Thickness(0, 0, 0, 3),
+                    FontSize = 11,
+                    FontWeight = FontWeights.Normal,
+                    VerticalAlignment = VerticalAlignment.Center,
+                    VerticalContentAlignment = VerticalAlignment.Center,
+                    Tag = viewModel.fileName + "=" + group
+                };
                 sp.Children.Add(btn);
                 btn.Click += new RoutedEventHandler(settings_Click);
 
@@ -136,9 +152,19 @@ namespace TNovMEPSpec
 
         }
 
-        private void Border_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        private void TitleBar_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.ChangedButton == MouseButton.Left)
+                DragMove();
+        }
 
+        private void HelpButton_Click(object sender, RoutedEventArgs e)
+        {
+            string commandText = HelpLinks.GetHelpLink("Сводная спека");
+            var proc = new System.Diagnostics.Process();
+            proc.StartInfo.FileName = commandText;
+            proc.StartInfo.UseShellExecute = true;
+            proc.Start();
         }
     }
 }

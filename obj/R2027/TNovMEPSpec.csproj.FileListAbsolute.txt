@@ -1,0 +1,28 @@
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec.csproj.AssemblyReference.cache
+Z:\DEV\TNovMEPSpec\obj\R2027\MEPSpecOVVKParamsWPF.g.cs
+Z:\DEV\TNovMEPSpec\obj\R2027\MEPSpecOVVKWPF.g.cs
+Z:\DEV\TNovMEPSpec\obj\R2027\MEPSpecSSWPF.g.cs
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec_MarkupCompile.cache
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec_MarkupCompile.lref
+\\fs-nova\Distr\0.For Admin\_TNov\build\2027\runtimes\win-x64\native\WebView2Loader.dll
+\\fs-nova\Distr\0.For Admin\_TNov\build\2027\TNovMEPSpec.deps.json
+\\fs-nova\Distr\0.For Admin\_TNov\build\2027\TNovMEPSpec.dll
+\\fs-nova\Distr\0.For Admin\_TNov\build\2027\TNovMEPSpec.pdb
+Z:\DEV\TNovMEPSpec\obj\R2027\MEPSpecOVVKParamsWPF.baml
+Z:\DEV\TNovMEPSpec\obj\R2027\MEPSpecOVVKWPF.baml
+Z:\DEV\TNovMEPSpec\obj\R2027\MEPSpecSSWPF.baml
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec.g.resources
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec.GeneratedMSBuildEditorConfig.editorconfig
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec.csproj.CoreCompileInputs.cache
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec.sourcelink.json
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPS.6787BE6B.Up2Date
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec.dll
+Z:\DEV\TNovMEPSpec\obj\R2027\refint\TNovMEPSpec.dll
+Z:\DEV\TNovMEPSpec\obj\R2027\TNovMEPSpec.pdb
+Z:\DEV\TNovMEPSpec\obj\R2027\ref\TNovMEPSpec.dll
+Z:\DEV\_build-test\2027\runtimes\win-x64\native\WebView2Loader.dll
+Z:\DEV\_build-test\2027\TNovMEPSpec.deps.json
+Z:\DEV\_build-test\2027\TNovMEPSpec.dll
+Z:\DEV\_build-test\2027\TNovMEPSpec.pdb
+Z:\DEV\_build-test\2027\System.Resources.Extensions.dll
+\\fs-nova\Distr\0.For Admin\_TNov\build\2027\System.Resources.Extensions.dll
