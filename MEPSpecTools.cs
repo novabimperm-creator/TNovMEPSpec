@@ -296,17 +296,45 @@ namespace TNovMEPSpec
 
             if (viewModel2.naimPar2 != "выкл")
             {
+                
+                
                 bool param2exist = Param.ParamExist(viewModel2.naimPar2, elem);
                 if (param2exist)
                 {
                     string param2 = "";
-                    if (elem.LookupParameter(viewModel2.naimPar2).StorageType == StorageType.Double)
+                    //новый блок - учет труб с Днар
+                    if (viewModel2.naimPar2 == "Размер трубы")
                     {
-                        double paramDoubleValue = elem.LookupParameter(viewModel2.naimPar2).AsDouble() * 0.3048 * 1000;
-                        paramDoubleValue = Math.Round(paramDoubleValue, 1);
-                        param2 = paramDoubleValue.ToString().Replace(',', '.');
+                        try
+                        {
+                            InsulationLiningBase insulation = (InsulationLiningBase)elem;
+                            Element parentElem = doc.GetElement(insulation.HostElementId);
+                            if (parentElem != null && parentElem.GetTypeId().IntegerValue > 0)
+                            {
+                                Element parentElemType = doc.GetElement(parentElem.GetTypeId());
+                                string pipeTypeMrkT = Param.GetStringParamValue(doc, BuiltInParameter.WINDOW_TYPE_ID, parentElemType);
+                                if (pipeTypeMrkT != null && pipeTypeMrkT.Contains("Днар"))
+                                {
+                                    double paramDoubleValue = parentElem.get_Parameter(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER).AsDouble() * 0.3048 * 1000;
+                                    paramDoubleValue = Math.Round(paramDoubleValue, 1);
+                                    param2 = "ø" + paramDoubleValue.ToString().Replace(',', '.');
+                                }
+                            }
+                        }
+                        catch { }
                     }
-                    else param2 = elem.LookupParameter(viewModel2.naimPar2).AsValueString();
+                    if (param2 != null && param2.Length > 0) { } //окончание нового блока
+                    else
+                    {
+                        if (elem.LookupParameter(viewModel2.naimPar2).StorageType == StorageType.Double)
+                        {
+                            double paramDoubleValue = elem.LookupParameter(viewModel2.naimPar2).AsDouble() * 0.3048 * 1000;
+                            paramDoubleValue = Math.Round(paramDoubleValue, 1);
+                            param2 = paramDoubleValue.ToString().Replace(',', '.');
+                        }
+                        else param2 = elem.LookupParameter(viewModel2.naimPar2).AsValueString();
+                    }
+                    //окончание редактирования
                     if (param2 != null && param2.Length > 0)
                     {
                         if (viewModel2.naimPrefix2 != null && viewModel2.naimPrefix2.Length > 0) naimValue = naimValue + viewModel2.naimPrefix2;
@@ -321,13 +349,39 @@ namespace TNovMEPSpec
                 if (param3exist)
                 {
                     string param3 = "";
-                    if (elem.LookupParameter(viewModel2.naimPar3).StorageType == StorageType.Double)
+                    //новый блок - учет труб с Днар
+                    if (viewModel2.naimPar3 == "Размер трубы")
                     {
-                        double paramDoubleValue = elem.LookupParameter(viewModel2.naimPar3).AsDouble() * 0.3048 * 1000;
-                        paramDoubleValue = Math.Round(paramDoubleValue, 1);
-                        param3 = paramDoubleValue.ToString().Replace(',', '.');
+                        try
+                        {
+                            InsulationLiningBase insulation = (InsulationLiningBase)elem;
+                            Element parentElem = doc.GetElement(insulation.HostElementId);
+                            if (parentElem != null && parentElem.GetTypeId().IntegerValue > 0)
+                            {
+                                Element parentElemType = doc.GetElement(parentElem.GetTypeId());
+                                string pipeTypeMrkT = Param.GetStringParamValue(doc, BuiltInParameter.WINDOW_TYPE_ID, parentElemType);
+                                if (pipeTypeMrkT != null && pipeTypeMrkT.Contains("Днар"))
+                                {
+                                    double paramDoubleValue = parentElem.get_Parameter(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER).AsDouble() * 0.3048 * 1000;
+                                    paramDoubleValue = Math.Round(paramDoubleValue, 1);
+                                    param3 = "ø" + paramDoubleValue.ToString().Replace(',', '.');
+                                }
+                            }
+                        }
+                        catch { }
                     }
-                    else param3 = elem.LookupParameter(viewModel2.naimPar3).AsValueString();
+                    if (param3 != null && param3.Length > 0) { } //окончание нового блока
+                    else
+                    {
+                        if (elem.LookupParameter(viewModel2.naimPar3).StorageType == StorageType.Double)
+                        {
+                            double paramDoubleValue = elem.LookupParameter(viewModel2.naimPar3).AsDouble() * 0.3048 * 1000;
+                            paramDoubleValue = Math.Round(paramDoubleValue, 1);
+                            param3 = paramDoubleValue.ToString().Replace(',', '.');
+                        }
+                        else param3 = elem.LookupParameter(viewModel2.naimPar3).AsValueString();
+                    }
+                    //окончание редактирования
                     if (param3 != null && param3.Length > 0)
                     {
                         if (viewModel2.naimPrefix3 != null && viewModel2.naimPrefix3.Length > 0) naimValue = naimValue + viewModel2.naimPrefix3;
@@ -342,13 +396,39 @@ namespace TNovMEPSpec
                 if (param4exist)
                 {
                     string param4 = "";
-                    if (elem.LookupParameter(viewModel2.naimPar4).StorageType == StorageType.Double)
+                    //новый блок - учет труб с Днар
+                    if (viewModel2.naimPar4 == "Размер трубы")
                     {
-                        double paramDoubleValue = elem.LookupParameter(viewModel2.naimPar4).AsDouble() * 0.3048 * 1000;
-                        paramDoubleValue = Math.Round(paramDoubleValue, 1);
-                        param4 = paramDoubleValue.ToString().Replace(',', '.');
+                        try
+                        {
+                            InsulationLiningBase insulation = (InsulationLiningBase)elem;
+                            Element parentElem = doc.GetElement(insulation.HostElementId);
+                            if (parentElem != null && parentElem.GetTypeId().IntegerValue > 0)
+                            {
+                                Element parentElemType = doc.GetElement(parentElem.GetTypeId());
+                                string pipeTypeMrkT = Param.GetStringParamValue(doc, BuiltInParameter.WINDOW_TYPE_ID, parentElemType);
+                                if (pipeTypeMrkT != null && pipeTypeMrkT.Contains("Днар"))
+                                {
+                                    double paramDoubleValue = parentElem.get_Parameter(BuiltInParameter.RBS_PIPE_OUTER_DIAMETER).AsDouble() * 0.3048 * 1000;
+                                    paramDoubleValue = Math.Round(paramDoubleValue, 1);
+                                    param4 = "ø"+paramDoubleValue.ToString().Replace(',', '.');
+                                }
+                            }
+                        }
+                        catch { }
                     }
-                    else param4 = elem.LookupParameter(viewModel2.naimPar4).AsValueString();
+                    if (param4 != null && param4.Length > 0) { } //окончание нового блока
+                    else
+                    {
+                        if (elem.LookupParameter(viewModel2.naimPar4).StorageType == StorageType.Double)
+                        {
+                            double paramDoubleValue = elem.LookupParameter(viewModel2.naimPar4).AsDouble() * 0.3048 * 1000;
+                            paramDoubleValue = Math.Round(paramDoubleValue, 1);
+                            param4 = paramDoubleValue.ToString().Replace(',', '.');
+                        }
+                        else param4 = elem.LookupParameter(viewModel2.naimPar4).AsValueString();
+                    }
+                    //окончание редактирования
                     if (param4 != null && param4.Length > 0)
                     {
                         if (viewModel2.naimPrefix4 != null && viewModel2.naimPrefix4.Length > 0) naimValue = naimValue + viewModel2.naimPrefix4;
