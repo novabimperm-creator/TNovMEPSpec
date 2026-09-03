@@ -1,4 +1,4 @@
-﻿using Autodesk.Revit.Attributes;
+using Autodesk.Revit.Attributes;
 using Autodesk.Revit.DB;
 using Autodesk.Revit.DB.Electrical;
 using Autodesk.Revit.DB.Structure;
@@ -57,20 +57,10 @@ namespace TNovMEPSpec
             "RBZ_Крепеж_Ед.измерения","RBZ_Крепеж_Марка","RBZ_Крепеж_Описание","RBZ_Крепеж_Производитель","RBZ_Крепеж_Артикул",
             "RBZ_Труба_Ед.измерения","RBZ_Труба_Марка","RBZ_Труба_Описание","RBZ_Труба_Производитель","RBZ_Труба_Артикул"
         };
-        string[] esystemStringParams = new string[]
-        {
-            "RBZ_Кабель_Ед.измерения","RBZ_Кабель_Марка","RBZ_Кабель_Описание","RBZ_Кабель_Производитель",
-            "RBZ_Крепеж_Ед.измерения","RBZ_Крепеж_Марка","RBZ_Крепеж_Описание","RBZ_Крепеж_Производитель","RBZ_Крепеж_Артикул",
-            "RBZ_Труба_Ед.измерения","RBZ_Труба_Марка","RBZ_Труба_Описание","RBZ_Труба_Производитель","RBZ_Труба_Артикул"
-        };
         string[] cubeConduitDoubleParams = new string[]
         {
             "Короб_Кабель_1_Количество","Короб_Кабель_2_Количество","Короб_Кабель_3_Количество","Короб_Кабель_4_Количество",
             "Короб_Кабель_5_Количество","Короб_Крепеж_Количество","Короб_Труба_Количество"
-        };
-        string[] cubeElSystemDoubleParams = new string[]
-        {
-            "Цепь_Кабель_Количество","Цепь_Крепеж_Количество","Цепь_Труба_Количество"
         };
         string[] cubeCableTrayDoubleParams = new string[]
         {
@@ -88,6 +78,32 @@ namespace TNovMEPSpec
             this.adskgProgressBar = new TNovProgressBar();
             this.adskgProgressBar.Show();
             Dispatcher.Run();
+        }
+
+        internal void StartSSProgressBar()
+        {
+            if (adskgProgressBar != null) return;
+
+            Thread thread = new Thread(new ThreadStart(this.ThreadStartingPoint));
+            thread.SetApartmentState(ApartmentState.STA);
+            thread.IsBackground = true;
+            thread.Start();
+
+            int n = 0;
+            while (adskgProgressBar == null && n++ < 200)
+                Thread.Sleep(10);
+            if (adskgProgressBar == null) return;
+
+            this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() =>
+            {
+                if (adskgProgressBar.info != null)
+                    adskgProgressBar.info.Text = "Подготовка...";
+                adskgProgressBar.TNov_ProgressBar.Minimum = 0;
+                adskgProgressBar.TNov_ProgressBar.Maximum = 1;
+                adskgProgressBar.TNov_ProgressBar.Value = 0;
+                adskgProgressBar.value.Text = "0";
+                adskgProgressBar.maxvalue.Text = "…";
+            }));
         }
 
         public Result Execute(ExternalCommandData commandData, ref string message, ElementSet elements)
@@ -178,12 +194,6 @@ namespace TNovMEPSpec
                     .Cast<FamilyInstance>()
                     .ToList();
 
-                List<ElectricalSystem> ElectricalSystems = new FilteredElementCollector(doc)
-                    .OfCategory(BuiltInCategory.OST_ElectricalCircuit)
-                    .WhereElementIsNotElementType()
-                    .Cast<ElectricalSystem>()
-                    .ToList();
-
                 List<Element> GMs = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_GenericModel)   //фильтр по категории Об модели
                                                                              .WhereElementIsNotElementType()
                                                                              .OfClass(typeof(FamilyInstance))
@@ -224,1198 +234,83 @@ namespace TNovMEPSpec
                 Double.TryParse(vmk2, out conduitCoeffPipe);
 
                 double conduitStep = 500;
-                string vmk3 = viewModel.ElSystemStep.Replace('.', ',');
+                string vmk3 = viewModel.ConduitStep.Replace('.', ',');
                 Double.TryParse(vmk3, out conduitStep);
 
-                double elSystemCoeffCable = 1.5;
-                string vmk4 = viewModel.ElSystemCoeffCable.Replace('.', ',');
-                Double.TryParse(vmk4, out elSystemCoeffCable);
-
-                double elSystemCoeffPipe = 1.3;
-                string vmk5 = viewModel.ElSystemCoeffPipe.Replace('.', ',');
-                Double.TryParse(vmk5, out elSystemCoeffPipe);
-
-                double elSystemStep = 500;
-                string vmk6 = viewModel.ElSystemStep.Replace('.', ',');
-                Double.TryParse(vmk6, out elSystemStep);
-
                 double cableTrayCoeffCable = 1.3;
-                string vmk7 = viewModel.CableTrayCoeffCable.Replace('.', ',');
-                Double.TryParse(vmk7, out cableTrayCoeffCable);
+                string vmk4 = viewModel.CableTrayCoeffCable.Replace('.', ',');
+                Double.TryParse(vmk4, out cableTrayCoeffCable);
 
-                int failscount = 0;
-                List<string> failed = new List<string>();
-
-                Logger.Log("Ищем принципиальные типы лотков", 1);
-                List<string> CableTrayTypes = new List<string>();
-                foreach (var c in CableTrays)
+                Logger.Log("Preflight: проверка RBZ_Пучок на коробах и лотках", 1);
+                List<Element> preflightElems = new List<Element>();
+                foreach (var c in Conduit) preflightElems.Add(c);
+                foreach (var c in CableTrays) preflightElems.Add(c);
+                List<SSCablePreflightRow> preflightRows =
+                    MEPSpecTools.BuildSSCableBundlePreflightRows(preflightElems, adskGparamGuid);
+                if (preflightRows.Count > 0)
                 {
-#if R2022
-                    string cType =
-                        c.get_Parameter(adskGparamGuid).AsString() +
-                        c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 2").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
-#else
-                    string cType =
-                        c.get_Parameter(adskGparamGuid).AsString() +
-                        c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
-#endif
-                    CableTrayTypes.Add(cType);
+                    Logger.Log("Preflight: найдено групп с ошибками: " + preflightRows.Count.ToString(), 3);
+                    MEPSpecSSPreflightHost.Show(uiApp, preflightRows);
+                    return Result.Cancelled;
                 }
-                CableTrayTypes = CableTrayTypes.Distinct().ToList();
-                foreach (var cType in CableTrayTypes) Logger.Log("   " + cType, 2);
+                Logger.Log("Preflight: проблем не найдено", 1);
 
-                Logger.Log("Ищем принципиальные типы коробов", 1);
-                List<string> ConduitTypes = new List<string>();
-                foreach (var c in Conduit)
+                List<string> CableTrayTypes;
+                List<string> ConduitTypes;
+                List<SSTypePreviewRow> typePreviewRows;
+                using (MEPSpecSSWaitHost.Show(uiApp))
                 {
-#if R2022
-                    string cType =
-                        c.get_Parameter(adskGparamGuid).AsString() +
-                        c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 2").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
-                        c.LookupParameter("Труба").AsElementId().IntegerValue.ToString() +
-                        c.LookupParameter("Крепеж").AsElementId().IntegerValue.ToString();
-#else
-                    string cType =
-                        c.get_Parameter(adskGparamGuid).AsString() +
-                        c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
-                        c.LookupParameter("Труба").AsElementId().Value.ToString() +
-                        c.LookupParameter("Крепеж").AsElementId().Value.ToString();
-#endif
-                    ConduitTypes.Add(cType);
-                }
-                ConduitTypes = ConduitTypes.Distinct().ToList();
-                foreach (var cType in ConduitTypes) Logger.Log("   " + cType, 2);
+                    Logger.Log("Ищем принципиальные типы лотков", 1);
+                    CableTrayTypes = new List<string>();
+                    foreach (var c in CableTrays)
+                        CableTrayTypes.Add(MEPSpecTools.BuildSSCableTrayTypeKey(c, adskGparamGuid));
+                    CableTrayTypes = CableTrayTypes.Distinct().ToList();
+                    foreach (var cType in CableTrayTypes) Logger.Log("   " + cType, 2);
 
-                using (TransactionGroup group = new TransactionGroup(RevitAPI.Document, "TNov - Сводная спека"))
+                    Logger.Log("Ищем принципиальные типы коробов", 1);
+                    ConduitTypes = new List<string>();
+                    foreach (var c in Conduit)
+                        ConduitTypes.Add(MEPSpecTools.BuildSSConduitTypeKey(c, adskGparamGuid));
+                    ConduitTypes = ConduitTypes.Distinct().ToList();
+                    foreach (var cType in ConduitTypes) Logger.Log("   " + cType, 2);
+
+                    typePreviewRows = MEPSpecTools.BuildSSTypePreviewRows(
+                        Conduit,
+                        CableTrays,
+                        ConduitTypes,
+                        CableTrayTypes,
+                        adskGparamGuid);
+                }
+
+                MEPSpec command = this;
+                SSRunContext ssCtx = new SSRunContext
                 {
-                    group.Start();
-
-                    //короба
-                    /*
-                    Logger.Log("Короба. Очищаем параметры со сброшенным ключом");
-                    using (Transaction transactionConduitPars = new Transaction(doc))
-                    {
-                        transactionConduitPars.Start("TNov - Сводная спека (короба чистка параметров)");
-                        Logger.Log("Открываем транзакцию 01", 1);
-
-                        foreach (var cond in Conduit)
-                        {
-                            Element c = doc.GetElement(cond.Id);
-                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 1") == false)
-                            {
-                                try
-                                {
-                                    if(c.LookupParameter("RBZ_Пучок1_Ед.измерения").IsReadOnly==false) c.LookupParameter("RBZ_Пучок1_Ед.измерения").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок1_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Марка").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок1_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Описание").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок1_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Производитель").Set("");
-                                }
-                                catch { }
-                            }
-                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 2") == false)
-                            {
-                                try
-                                {
-                                    if (c.LookupParameter("RBZ_Пучок2_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Ед.измерения").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок2_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Марка").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок2_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Описание").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок2_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Производитель").Set("");
-                                }
-                                catch { }
-                            }
-                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 3") == false)
-                            {
-                                try
-                                {
-                                    if (c.LookupParameter("RBZ_Пучок3_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Ед.измерения").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок3_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Марка").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок3_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Описание").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок3_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Производитель").Set("");
-                            }
-                                catch { }
-                        }
-                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 4") == false)
-                            {
-                                try
-                                {
-                                    if (c.LookupParameter("RBZ_Пучок4_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Ед.измерения").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок4_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Марка").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок4_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Описание").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок4_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Производитель").Set("");
-                        }
-                                catch { }
-                    }
-                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 5") == false)
-                            {
-                                try
-                                {
-                                    if (c.LookupParameter("RBZ_Пучок5_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Ед.измерения").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок5_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Марка").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок5_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Описание").Set("");
-                                    if (c.LookupParameter("RBZ_Пучок5_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Производитель").Set("");
-                    }
-                                catch { }
-                }
-                            if (MEPSpecTools.IsIdParamSet(c, "Труба") == false)
-                            {
-                                try
-                                {
-                                    if (c.LookupParameter("RBZ_Труба_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Ед.измерения").Set("");
-                                    if (c.LookupParameter("RBZ_Труба_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Марка").Set("");
-                                    if (c.LookupParameter("RBZ_Труба_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Описание").Set("");
-                                    if (c.LookupParameter("RBZ_Труба_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Производитель").Set("");
-                                    if (c.LookupParameter("RBZ_Труба_Артикул").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Артикул").Set("");
-                }
-                                catch { }
-            }
-                            if (MEPSpecTools.IsIdParamSet(c, "Крепеж") == false)
-                            {
-                                try
-                                {
-                                    if (c.LookupParameter("RBZ_Крепеж_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Ед.измерения").Set("");
-                                    if (c.LookupParameter("RBZ_Крепеж_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Марка").Set("");
-                                    if (c.LookupParameter("RBZ_Крепеж_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Описание").Set("");
-                                    if (c.LookupParameter("RBZ_Крепеж_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Производитель").Set("");
-                                    if (c.LookupParameter("RBZ_Крепеж_Артикул").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Артикул").Set("");
-            }
-                                catch { }
-        }
-                        }
-
-                        Logger.Log("Закрываем транзакцию 1", 1);
-                        transactionConduitPars.Commit();
-                    }
-                    */
-
-                    int allcount = elEq.Count + CableTrays.Count + CableTrayFittings.Count + ConduitTypes.Count + CableTrayTypes.Count + FireAlarmDevices.Count + ElectricalSystems.Count;
-
-                    Thread thread = new Thread(new ThreadStart(this.ThreadStartingPoint));
-                    thread.SetApartmentState(ApartmentState.STA);
-                    thread.IsBackground = true;
-                    thread.Start();
-                    Thread.Sleep(100);
-
-
-                    int PBCount = 0;
-                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Minimum = (double)PBCount));
-                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Maximum = (double)allcount));
-                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.maxvalue.Text = allcount.ToString()));
-
-
-
-                    Logger.Log("Короба. Ищем кубики", 1);
-
-                    int j = 0;
-                    ICollection<ElementId> GMsToRemove = new List<ElementId>();
-                    int cubeId = -1;
-                    foreach (FamilyInstance GM0 in GMs)
-                    {
-                        Element e = RevitAPI.Document.GetElement(GM0.Id);
-                        string familyName0 = GM0.Symbol.FamilyName;
-                        Element eType0 = RevitAPI.Document.GetElement(e.GetTypeId());
-                        if (familyName0.Contains("pmN.Условное семейство СС ПС") && eType0.Name.Contains("Короб"))
-                        {
-                            j++;
-                            if (j == 1) //первый кубик данного типа - очищаем параметры
-                            {
-                                e.LookupParameter("Короб_Кабель_1_Количество")?.Set(0);
-                                e.LookupParameter("Короб_Кабель_2_Количество")?.Set(0);
-                                e.LookupParameter("Короб_Кабель_3_Количество")?.Set(0);
-                                e.LookupParameter("Короб_Кабель_4_Количество")?.Set(0);
-                                e.LookupParameter("Короб_Кабель_5_Количество")?.Set(0);
-                                e.LookupParameter("Короб_Крепеж_Количество")?.Set(0);
-                                e.LookupParameter("Короб_Труба_Количество")?.Set(0);
-#if R2022
-                                cubeId = GM0.Id.IntegerValue;
-#else
-                                cubeId = (int)GM0.Id.Value;
-#endif
-                                Logger.Log("   Первый кубик найден и обработан", 2);
-                            }
-                            if (j > 1) GMsToRemove.Add(GM0.Id); //последующие кубики данного типа - в список на удаление
-                        }
-
-                    }
-                    if (j > 1)
-                    {
-                        using (Transaction transactionCubes = new Transaction(doc))
-                        {
-                            transactionCubes.Start("TNov - Сводная спека (короба кубики)");
-                            Logger.Log("Открываем транзакцию 1", 1);
-
-                            RevitAPI.Document.Delete(GMsToRemove.ToArray());
-                            Logger.Log("   Удалены остальные кубики в количестве: " + GMsToRemove.Count.ToString(), 1);
-
-                            Logger.Log("Закрываем транзакцию 1", 1);
-                            transactionCubes.Commit();
-                        }
-
-
-                    }
-                    else if (j == 0)
-                    {
-                        Logger.Log("   Кубик с типом Короб отсутствует в модели. Завершение работы.", 3);
-                        new InfoWindow280("Отсутствует хотя бы 1 размещенный экземпляр семейства pmN.Условное семейство СС ПС с типом Короб. " +
-                            "Разместите его в любом удобном месте в модели.").ShowDialog();
-                        this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() => this.adskgProgressBar.Close()));
-                        return Result.Cancelled;
-                    }
-
-                    List<FamilyInstance> GMs1 = new FilteredElementCollector(RevitAPI.Document).OfCategory(BuiltInCategory.OST_GenericModel)   //фильтр по категории Об модели
-                                                                                        .WhereElementIsNotElementType()
-                                                                                        .OfClass(typeof(FamilyInstance))
-                                                                                        .Cast<FamilyInstance>()
-                                                                                        .ToList();
-
-                    //собираем данные с коробов исходя из принципиальных типов
-                    Logger.Log("Формируем данные для кубиков", 1);
-
-                    List<ConduitCube> cubes = new List<ConduitCube>();
-                    /*
-                    List<Conduit> Conduit1 = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Conduit)
-                                                                 .WhereElementIsNotElementType()
-                                                                 .Cast<Conduit>()
-                                                                 .ToList();
-                    */
-                    foreach (var cType in ConduitTypes)
-                    {
-                        Logger.Log("   " + cType, 2);
-
-                        List<Element> cTypeElems = new List<Element>(); //пустой список коробов
-                        foreach (var c in Conduit)
-                        {
-#if R2022
-                            string cType1 =
-                        c.get_Parameter(adskGparamGuid).AsString() +
-                        c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 2").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
-                        c.LookupParameter("Труба").AsElementId().IntegerValue.ToString() +
-                        c.LookupParameter("Крепеж").AsElementId().IntegerValue.ToString();
-#else
-                            string cType1 =
-                        c.get_Parameter(adskGparamGuid).AsString() +
-                        c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
-                        c.LookupParameter("Труба").AsElementId().Value.ToString() +
-                        c.LookupParameter("Крепеж").AsElementId().Value.ToString();
-#endif
-                            if (cType1 == cType)
-                            {
-                                cTypeElems.Add(doc.GetElement(c.Id));
-                                Logger.Log("      " + c.Id.ToString(), 2);
-                            }
-                        }
-                        List<string> stringValues = new List<string>();
-                        List<double> doubleValues = new List<double>();
-                        List<string> cableGroupStringValues = new List<string>();
-                        string gvalue = "";
-
-                        int cableCounter = 0; //счетчик для считывания кол-ва кабеля
-
-                        Element firstElem = cTypeElems.First();
-
-                        for(int i=0; i< cableGroupStringParams.Length;i++) //группирование для пучков
-                        {
-                            string paramName = cableGroupStringParams[i];
-                            string val = "";
-                            if (Param.ParamExist(paramName, firstElem) && firstElem.LookupParameter(paramName).HasValue)
-                            {
-                                val=firstElem.LookupParameter(paramName).AsString();
-                            }
-                            else if (Param.ParamExistByGuid(adskGparamGuid, firstElem) && firstElem.get_Parameter(adskGparamGuid).HasValue)
-                            {
-                                val=firstElem.get_Parameter(adskGparamGuid).AsString();
-                            }
-                            cableGroupStringValues.Add(val); Logger.Log("      " + val, 2);
-                        }
-
-                        for (int i = 0; i < conduitStringParams.Length; i++) //проходим по списку текстовых параметров
-                        {
-                            string conduitParam = conduitStringParams[i];
-                            Logger.Log("   " + conduitParam, 2);
-                            string value = "";
-                            //получаем значение текстового параметра с первого короба в списке коробов данного типа
-                            bool cParamExist = Param.ParamExist(conduitParam, firstElem);
-                            if (cParamExist)
-                            {
-                                Parameter prm = firstElem.LookupParameter(conduitParam);
-                                bool hasValue = prm.IsReadOnly&& prm.HasValue;
-                                if (hasValue)
-                                {
-                                    string cParamValue = firstElem.LookupParameter(conduitParam).AsString();
-                                    if (cParamValue.Length > 0)
-                                    {
-                                        value = cParamValue; Logger.Log("      " + cParamValue, 2);
-                                    }
-                                    else Logger.Log("      пустое значение", 2);
-                                }
-                                else Logger.Log("      пустое значение", 2);
-                            }
-                            stringValues.Add(value);
-                            bool gParamExist = Param.ParamExistByGuid(adskGparamGuid, firstElem);
-                            if (cParamExist)
-                            {
-                                bool hasValue = firstElem.get_Parameter(adskGparamGuid).HasValue;
-                                if (hasValue)
-                                {
-                                    string gParamValue = firstElem.get_Parameter(adskGparamGuid).AsString();
-                                    if (gParamValue.Length > 0)
-                                    {
-                                        gvalue = gParamValue; Logger.Log("      " + gParamValue, 2);
-                                    }
-                                    else Logger.Log("      пустое значение", 2);
-                                }
-                                else Logger.Log("      пустое значение", 2);
-                            }
-
-
-                            if (i == 0 || i == 4 || i == 8 || i == 12 || i == 16) //кабели
-                            {
-                                cableCounter++;
-                                string cableCountParam = "Кабель тип " + cableCounter.ToString() + " колво";
-                                bool cableCountParamExist = Param.ParamExist(cableCountParam, firstElem);
-
-                                double dValue = 0;
-                                if (value.Length > 0)
-                                {
-                                    foreach (var c in cTypeElems) //прибавляем длину с каждого элемента
-                                    {
-                                        int cableCount = 1;
-                                        if (cableCountParamExist)
-                                        {
-                                            if (c.LookupParameter(cableCountParam).HasValue) cableCount = c.LookupParameter(cableCountParam).AsInteger();
-                                        }
-
-                                        dValue += c.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble() * 0.3048 * cableCount * conduitCoeff;
-                                    }
-                                }
-                                doubleValues.Add(dValue);
-                                Logger.Log("      " + dValue.ToString(), 2);
-                            }
-                            if (i == 20) //крепежи
-                            {
-                                double dValue = 0;
-                                if (value.Length > 0)
-                                {
-                                    foreach (var c in cTypeElems)
-                                    {
-                                        dValue += (int)Math.Round(c.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble() * 0.3048 * 1000 / conduitStep);
-                                    }
-                                }
-                                doubleValues.Add(dValue);
-                                Logger.Log("      " + dValue.ToString(), 2);
-                            }
-                            if (i == 25) //трубы
-                            {
-                                double dValue = 0;
-                                if (value.Length > 0)
-                                {
-                                    foreach (var c in cTypeElems) //прибавляем длину с каждого элемента
-                                    {
-                                        dValue += c.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble() * 0.3048 * conduitCoeffPipe;
-                                    }
-                                }
-                                doubleValues.Add(dValue);
-                                Logger.Log("      " + dValue.ToString(), 2);
-                            }
-                        }
-
-                        cubes.Add(new ConduitCube { Name = cType, StringValues = stringValues, DoubleValues = doubleValues, ADSKGroup = gvalue, CableGroupStringValues = cableGroupStringValues });
-                    }
-                    using (Transaction transactionConduit = new Transaction(doc))
-                    {
-                        transactionConduit.Start("TNov - Сводная спека (короба)");
-
-                        //создание элементов кубиков
-                        Logger.Log("Транзакция 2 (короба). Создаем кубики", 1);
-
-                        ElementId cubeElementId = new ElementId(cubeId); //нашли существующий кубик
-                        FamilyInstance GM = (FamilyInstance)doc.GetElement(cubeElementId);
-                        string familyName = GM.Symbol.FamilyName;
-                        Element eType = doc.GetElement(GM.GetTypeId());
-                        LocationPoint point = GM.Location as LocationPoint;
-
-                        int count = 0;
-
-                        foreach (var cc in cubes)
-                        {
-                            Logger.Log("   Тип " + cc.Name, 2);
-                            count++;
-                            XYZ newLocation = new XYZ(point.Point.X, point.Point.Y, point.Point.Z + count * 0.3048);
-                            FamilyInstance instance = RevitAPI.Document.Create.NewFamilyInstance(newLocation, GM.Symbol, StructuralType.NonStructural);
-                            Element newElem = RevitAPI.Document.GetElement(instance.Id);
-
-                            Logger.Log("      Новый элемент " + instance.Id.ToString() + ", значения параметров:", 2);
-                            //заполняем параметры кубика
-                            for (int i = 0; i < conduitStringParams.Length; i++)
-                            {
-                                newElem.LookupParameter(conduitStringParams[i])?.Set(cc.StringValues[i]);
-                                Logger.Log("      " + conduitStringParams[i] + ": " + cc.StringValues[i], 2);
-                            }
-                            for (int i = 0; i < cubeConduitDoubleParams.Length; i++)
-                            {
-                                newElem.LookupParameter(cubeConduitDoubleParams[i])?.Set(Math.Round(cc.DoubleValues[i], 1));
-                                Logger.Log("      " + cubeConduitDoubleParams[i] + ": " + Math.Round(cc.DoubleValues[i], 1).ToString(), 2);
-                            }
-                            for (int i = 0; i < cableGroupStringParams.Length; i++)
-                            {
-                                newElem.LookupParameter(cableGroupStringParams[i])?.Set(cc.CableGroupStringValues[i]);
-                                Logger.Log("      " + cableGroupStringParams[i] + ": " + cc.CableGroupStringValues[i], 2);
-                            }
-                            newElem.get_Parameter(adskGparamGuid)?.Set(cc.ADSKGroup);
-                            PBCount++;
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-
-                        }
-
-                        Logger.Log("Закрываем транзакцию 2", 1);
-                        transactionConduit.Commit();
-
-
-
-
-                    }
-
-                    //цепи
-
-                    Logger.Log("Цепи. Ищем кубики", 1);
-
-                    int j2 = 0;
-                    ICollection<ElementId> GMsToRemove2 = new List<ElementId>();
-                    int cubeId2 = -1;
-                    foreach (FamilyInstance GM0 in GMs1)
-                    {
-                        Element e = RevitAPI.Document.GetElement(GM0.Id);
-                        string familyName0 = GM0.Symbol.FamilyName;
-                        Element eType0 = RevitAPI.Document.GetElement(e.GetTypeId());
-                        if (familyName0.Contains("pmN.Условное семейство СС ПС") && eType0.Name.Contains("Цепь"))
-                        {
-                            j2++;
-                            if (j2 == 1) //первый кубик данного типа - очищаем параметры
-                            {
-                                e.LookupParameter("Цепь_Кабель_Количество")?.Set(0);
-                                e.LookupParameter("Цепь_Крепеж_Количество")?.Set(0);
-                                e.LookupParameter("Цепь_Труба_Количество")?.Set(0);
-#if R2022
-                                cubeId2 = GM0.Id.IntegerValue;
-#else
-                                cubeId2 = (int)GM0.Id.Value;
-#endif
-                                Logger.Log("   Первый кубик найден и обработан", 2);
-                            }
-                            if (j2 > 1) GMsToRemove2.Add(GM0.Id); //последующие кубики данного типа - в список на удаление
-                        }
-
-                    }
-                    if (j2 > 1)
-                    {
-                        using (Transaction transactionCubes2 = new Transaction(doc))
-                        {
-                            transactionCubes2.Start("TNov - Сводная спека (цепи кубики)");
-                            Logger.Log("Открываем транзакцию 3", 1);
-
-                            RevitAPI.Document.Delete(GMsToRemove2.ToArray());
-                            Logger.Log("   Удалены остальные кубики в количестве: " + GMsToRemove2.Count.ToString(), 1);
-
-                            Logger.Log("Закрываем транзакцию 3", 1);
-                            transactionCubes2.Commit();
-                        }
-
-
-                    }
-                    else if (j2 == 0)
-                    {
-                        Logger.Log("   Кубик с типом Цепь отсутствует в модели. Завершение работы.", 3);
-                        new InfoWindow280("Отсутствует хотя бы 1 размещенный экземпляр семейства pmN.Условное семейство СС ПС с типом Цепь. " +
-                            "Разместите его в любом удобном месте в модели.").ShowDialog();
-                        this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() => this.adskgProgressBar.Close()));
-                        return Result.Cancelled;
-                    }
-
-                    List<FamilyInstance> GMs2 = new FilteredElementCollector(RevitAPI.Document).OfCategory(BuiltInCategory.OST_GenericModel)   //фильтр по категории Об модели
-                                                                                        .WhereElementIsNotElementType()
-                                                                                        .OfClass(typeof(FamilyInstance))
-                                                                                        .Cast<FamilyInstance>()
-                                                                                        .ToList();
-
-                    //собираем данные с цепей
-                    Logger.Log("Формируем данные для кубиков", 1);
-
-                    List<ConduitCube> cubes2 = new List<ConduitCube>();
-
-                    foreach (var ElectricalSystem in ElectricalSystems)
-                    {
-#if R2022
-                        Logger.Log("   " + ElectricalSystem.Id.IntegerValue.ToString(), 2);
-#else
-                        Logger.Log("   " + ElectricalSystem.Id.Value.ToString(), 2);
-#endif
-                        List<string> stringValues = new List<string>();
-                        List<double> doubleValues = new List<double>();
-                        string gvalue = "";
-                        for (int i = 0; i < esystemStringParams.Length; i++) //проходим по списку текстовых параметров
-                        {
-                            string esystemParam = esystemStringParams[i];
-                            Logger.Log("   " + esystemParam, 2);
-                            string value = "";
-                            //получаем значение текстового параметра с цепи
-                            bool cParamExist = Param.ParamExist(esystemParam, ElectricalSystem);
-                            if (cParamExist)
-                            {
-                                Parameter prm = ElectricalSystem.LookupParameter(esystemParam);
-                                bool hasValue = prm.IsReadOnly&& prm.HasValue;
-                                if (hasValue)
-                                {
-                                    string cParamValue = ElectricalSystem.LookupParameter(esystemParam).AsString();
-                                    if (cParamValue.Length > 0)
-                                    {
-                                        value = cParamValue; Logger.Log("      " + cParamValue, 2);
-                                    }
-                                    else Logger.Log("      пустое значение", 2);
-                                }
-                                else Logger.Log("      пустое значение", 2);
-                            }
-                            stringValues.Add(value);
-                            bool gParamExist = Param.ParamExistByGuid(adskGparamGuid, ElectricalSystem);
-                            if (cParamExist)
-                            {
-                                bool hasValue = ElectricalSystem.get_Parameter(adskGparamGuid).HasValue;
-                                if (hasValue)
-                                {
-                                    string gParamValue = ElectricalSystem.get_Parameter(adskGparamGuid).AsString();
-                                    if (gParamValue.Length > 0)
-                                    {
-                                        gvalue = gParamValue; Logger.Log("      " + gParamValue, 2);
-                                    }
-                                    else Logger.Log("      пустое значение", 2);
-                                }
-                                else Logger.Log("      пустое значение", 2);
-                            }
-
-                            if (i == 0) //кабели
-                            {
-                                double dValue = 0;
-                                if (value.Length > 0)
-                                {
-                                    dValue += ElectricalSystem.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM).AsDouble() * 0.3048 * elSystemCoeffCable;
-
-                                }
-                                doubleValues.Add(dValue);
-                                Logger.Log("      " + dValue.ToString(), 2);
-                            }
-                            if (i == 4) //крепежи
-                            {
-                                double dValue = 0;
-                                if (value.Length > 0) //4 крепежа на 1 метр с каждого элемента
-                                {
-                                    dValue += (int)Math.Round(ElectricalSystem.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM).AsDouble() * 0.3048 * 1000 / elSystemStep);
-
-                                }
-                                doubleValues.Add(dValue);
-                                Logger.Log("      " + dValue.ToString(), 2);
-                            }
-                            if (i == 9) //трубы
-                            {
-                                double dValue = 0;
-                                if (value.Length > 0)
-                                {
-                                    dValue += ElectricalSystem.get_Parameter(BuiltInParameter.RBS_ELEC_CIRCUIT_LENGTH_PARAM).AsDouble() * 0.3048 * elSystemCoeffPipe;
-
-                                }
-                                doubleValues.Add(dValue);
-                                Logger.Log("      " + dValue.ToString(), 2);
-                            }
-                        }
-
-                        cubes2.Add(new ConduitCube
-                        {
-#if R2022
-                            Name = ElectricalSystem.Id.IntegerValue.ToString(),
-#else
-                            Name = ElectricalSystem.Id.Value.ToString(),
-#endif
-                            StringValues = stringValues,
-                            DoubleValues = doubleValues,
-                            ADSKGroup = gvalue
-                        });
-
-
-                    }
-                    using (Transaction transactionElectricalSystem = new Transaction(doc))
-                    {
-                        transactionElectricalSystem.Start("TNov - Сводная спека (цепи)");
-
-                        //создание элементов кубиков
-                        Logger.Log("Транзакция 4 (цепи). Создаем кубики", 1);
-
-                        ElementId cubeElementId = new ElementId(cubeId2); //нашли существующий кубик
-                        FamilyInstance GM = (FamilyInstance)doc.GetElement(cubeElementId);
-                        string familyName = GM.Symbol.FamilyName;
-                        Element eType = doc.GetElement(GM.GetTypeId());
-                        LocationPoint point = GM.Location as LocationPoint;
-
-                        int count = 0;
-
-                        foreach (var cc in cubes2)
-                        {
-                            Logger.Log("   Тип " + cc.Name, 2);
-                            count++;
-                            XYZ newLocation = new XYZ(point.Point.X, point.Point.Y, point.Point.Z + count * 0.3048);
-                            FamilyInstance instance = RevitAPI.Document.Create.NewFamilyInstance(newLocation, GM.Symbol, StructuralType.NonStructural);
-                            Element newElem = RevitAPI.Document.GetElement(instance.Id);
-
-                            Logger.Log("      Новый элемент " + instance.Id.ToString() + ", значения параметров:", 2);
-                            //заполняем параметры кубика
-                            for (int i = 0; i < esystemStringParams.Length; i++)
-                            {
-                                newElem.LookupParameter(esystemStringParams[i])?.Set(cc.StringValues[i]);
-                                Logger.Log("      " + esystemStringParams[i] + ": " + cc.StringValues[i], 2);
-                            }
-                            for (int i = 0; i < cubeElSystemDoubleParams.Length; i++)
-                            {
-                                newElem.LookupParameter(cubeElSystemDoubleParams[i])?.Set(Math.Round(cc.DoubleValues[i], 1));
-                                Logger.Log("      " + cubeElSystemDoubleParams[i] + ": " + Math.Round(cc.DoubleValues[i], 1).ToString(), 2);
-                            }
-                            for (int i = 0; i < cableGroupStringParams.Length; i++)
-                            {
-                                newElem.LookupParameter(cableGroupStringParams[i])?.Set(cc.CableGroupStringValues[i]);
-                                Logger.Log("      " + cableGroupStringParams[i] + ": " + cc.CableGroupStringValues[i], 2);
-                            }
-                            newElem.get_Parameter(adskGparamGuid)?.Set(cc.ADSKGroup);
-
-                            PBCount++;
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-
-                        }
-
-                        Logger.Log("Закрываем транзакцию 4", 1);
-                        transactionElectricalSystem.Commit();
-
-
-
-
-                    }
-                    //лотки (кабель)
-
-                    Logger.Log("Лотки (кабель). Ищем кубики", 1);
-
-                    List<FamilyInstance> GMs3 = new FilteredElementCollector(RevitAPI.Document).OfCategory(BuiltInCategory.OST_GenericModel)   //фильтр по категории Об модели
-                                                                                        .WhereElementIsNotElementType()
-                                                                                        .OfClass(typeof(FamilyInstance))
-                                                                                        .Cast<FamilyInstance>()
-                                                                                        .ToList();
-
-                    int k = 0;
-                    ICollection<ElementId> GMsToRemove3 = new List<ElementId>();
-                    int cubeId3 = -1;
-                    foreach (FamilyInstance GM0 in GMs3)
-                    {
-                        Element e = RevitAPI.Document.GetElement(GM0.Id);
-                        string familyName0 = GM0.Symbol.FamilyName;
-                        Element eType0 = RevitAPI.Document.GetElement(e.GetTypeId());
-                        if (familyName0.Contains("pmN.Условное семейство СС ПС") && eType0.Name.Contains("Лоток"))
-                        {
-                            k++;
-                            if (k == 1) //первый кубик данного типа - очищаем параметры
-                            {
-                                e.LookupParameter("Лоток_Кабель_1_Количество")?.Set(0);
-                                e.LookupParameter("Лоток_Кабель_2_Количество")?.Set(0);
-                                e.LookupParameter("Лоток_Кабель_3_Количество")?.Set(0);
-                                e.LookupParameter("Лоток_Кабель_4_Количество")?.Set(0);
-                                e.LookupParameter("Лоток_Кабель_5_Количество")?.Set(0);
-#if R2022
-                                cubeId3 = GM0.Id.IntegerValue;
-#else
-                                cubeId3 = (int)GM0.Id.Value;
-#endif
-                                Logger.Log("   Первый кубик найден и обработан", 2);
-                            }
-                            if (k > 1) GMsToRemove3.Add(GM0.Id); //последующие кубики данного типа - в список на удаление
-                        }
-
-                    }
-                    if (k > 1)
-                    {
-                        using (Transaction transactionCubesCT = new Transaction(doc))
-                        {
-                            transactionCubesCT.Start("TNov - Сводная спека (лотки кубики)");
-                            Logger.Log("Открываем транзакцию 5", 1);
-
-                            RevitAPI.Document.Delete(GMsToRemove3.ToArray());
-                            Logger.Log("   Удалены остальные кубики в количестве: " + GMsToRemove3.Count.ToString(), 1);
-
-                            Logger.Log("Закрываем транзакцию 5", 1);
-                            transactionCubesCT.Commit();
-                        }
-
-
-                    }
-                    else if (k == 0)
-                    {
-                        Logger.Log("   Кубик с типом Лоток отсутствует в модели. Завершение работы.", 3);
-                        new InfoWindow280("Отсутствует хотя бы 1 размещенный экземпляр семейства pmN.Условное семейство СС ПС с типом Лоток. " +
-                            "Разместите его в любом удобном месте в модели.").ShowDialog();
-                        this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() => this.adskgProgressBar.Close()));
-                        return Result.Cancelled;
-                    }
-
-                    List<FamilyInstance> GMs4 = new FilteredElementCollector(RevitAPI.Document).OfCategory(BuiltInCategory.OST_GenericModel)   //фильтр по категории Об модели
-                                                                                        .WhereElementIsNotElementType()
-                                                                                        .OfClass(typeof(FamilyInstance))
-                                                                                        .Cast<FamilyInstance>()
-                                                                                        .ToList();
-
-                    //собираем данные с лотков исходя из принципиальных типов
-                    Logger.Log("Формируем данные для кубиков", 1);
-
-                    List<ConduitCube> cubes3 = new List<ConduitCube>();
-
-                    foreach (var cType in CableTrayTypes)
-                    {
-                        Logger.Log("   " + cType, 2);
-
-                        List<Element> cTypeElems = new List<Element>(); //пустой список лотков
-                        foreach (var c in CableTrays)
-                        {
-#if R2022
-                    string cType1 =
-                        c.get_Parameter(adskGparamGuid).AsString() +
-                        c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 2").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
-                        c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
-#else
-                            string cType1 =
-                                c.get_Parameter(adskGparamGuid).AsString() +
-                                c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
-                                c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
-                                c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
-                                c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
-                                c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
-#endif
-
-                            if (cType1 == cType)
-                            {
-                                cTypeElems.Add(doc.GetElement(c.Id));
-                                Logger.Log("      " + c.Id.ToString(), 2);
-                            }
-                        }
-                        List<string> stringValues = new List<string>();
-                        List<double> doubleValues = new List<double>();
-                        List<string> cableGroupStringValues = new List<string>();
-                        string gvalue = "";
-
-                        int cableCounter = 0; //счетчик для считывания кол-ва кабеля
-
-                        Element firstElem = cTypeElems.First();
-
-                        for (int i = 0; i < cableGroupStringParams.Length; i++) //группирование для пучков
-                        {
-                            string paramName = cableGroupStringParams[i];
-                            string val = "";
-                            if (Param.ParamExist(paramName, firstElem) && firstElem.LookupParameter(paramName).HasValue)
-                            {
-                                val = firstElem.LookupParameter(paramName).AsString();
-                            }
-                            else if (Param.ParamExistByGuid(adskGparamGuid, firstElem) && firstElem.get_Parameter(adskGparamGuid).HasValue)
-                            {
-                                val = firstElem.get_Parameter(adskGparamGuid).AsString();
-                            }
-                            cableGroupStringValues.Add(val); Logger.Log("      " + val, 2);
-                        }
-
-                        for (int i = 0; i < 20; i++) //проходим по списку текстовых параметров (20 - только параметры кабеля)
-                        {
-                            string conduitParam = conduitStringParams[i];
-                            Logger.Log("   " + conduitParam, 2);
-                            string value = "";
-                            //получаем значение текстового параметра с первого лотка в списке лотков данного типа
-                            bool cParamExist = Param.ParamExist(conduitParam, firstElem);
-                            if (cParamExist)
-                            {
-                                Parameter prm = firstElem.LookupParameter(conduitParam);
-                                bool hasValue = prm.IsReadOnly && prm.HasValue;
-                                if (hasValue)
-                                {
-                                    string cParamValue = firstElem.LookupParameter(conduitParam).AsString();
-                                    if (cParamValue.Length > 0)
-                                    {
-                                        value = cParamValue; Logger.Log("      " + cParamValue, 2);
-                                    }
-                                    else Logger.Log("      пустое значение", 2);
-                                }
-                                else Logger.Log("      пустое значение", 2);
-                            }
-                            stringValues.Add(value);
-                            bool gParamExist = Param.ParamExistByGuid(adskGparamGuid, firstElem);
-                            if (cParamExist)
-                            {
-                                bool hasValue = firstElem.get_Parameter(adskGparamGuid).HasValue;
-                                if (hasValue)
-                                {
-                                    string gParamValue = firstElem.get_Parameter(adskGparamGuid).AsString();
-                                    if (gParamValue.Length > 0)
-                                    {
-                                        gvalue = gParamValue; Logger.Log("      " + gParamValue, 2);
-                                    }
-                                    else Logger.Log("      пустое значение", 2);
-                                }
-                                else Logger.Log("      пустое значение", 2);
-                            }
-
-
-                            if (i == 0 || i == 4 || i == 8 || i == 12 || i == 16) //кабели
-                            {
-                                cableCounter++;
-                                string cableCountParam = "Кабель тип " + cableCounter.ToString() + " колво";
-                                bool cableCountParamExist = Param.ParamExist(cableCountParam, firstElem);
-
-                                double dValue = 0;
-                                if (value.Length > 0)
-                                {
-                                    foreach (var c in cTypeElems) //прибавляем длину с каждого элемента
-                                    {
-                                        int cableCount = 1;
-                                        if (cableCountParamExist)
-                                        {
-                                            if (c.LookupParameter(cableCountParam).HasValue) cableCount = c.LookupParameter(cableCountParam).AsInteger();
-                                        }
-
-                                        dValue += c.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble() * 0.3048 * cableCount * cableTrayCoeffCable;
-                                    }
-                                }
-                                doubleValues.Add(dValue);
-                                Logger.Log("      " + dValue.ToString(), 2);
-                            }
-
-                        }
-
-                        cubes3.Add(new ConduitCube { Name = cType, StringValues = stringValues, DoubleValues = doubleValues, ADSKGroup = gvalue });
-                    }
-                    using (Transaction transactionCTCable = new Transaction(doc))
-                    {
-                        transactionCTCable.Start("TNov - Сводная спека (кабели в лотках)");
-
-                        //создание элементов кубиков
-                        Logger.Log("Транзакция 6 (кабели в лотках). Создаем кубики", 1);
-
-                        ElementId cubeElementId = new ElementId(cubeId3); //нашли существующий кубик
-                        FamilyInstance GM = (FamilyInstance)doc.GetElement(cubeElementId);
-                        string familyName = GM.Symbol.FamilyName;
-                        Element eType = doc.GetElement(GM.GetTypeId());
-                        LocationPoint point = GM.Location as LocationPoint;
-
-                        int count = 0;
-
-                        foreach (var cc in cubes3)
-                        {
-                            Logger.Log("   Тип " + cc.Name, 2);
-                            count++;
-                            XYZ newLocation = new XYZ(point.Point.X, point.Point.Y, point.Point.Z + count * 0.3048);
-                            FamilyInstance instance = RevitAPI.Document.Create.NewFamilyInstance(newLocation, GM.Symbol, StructuralType.NonStructural);
-                            Element newElem = RevitAPI.Document.GetElement(instance.Id);
-
-                            Logger.Log("      Новый элемент " + instance.Id.ToString() + ", значения параметров:", 2);
-                            //заполняем параметры кубика
-                            for (int i = 0; i < 20; i++)
-                            {
-                                newElem.LookupParameter(conduitStringParams[i])?.Set(cc.StringValues[i]);
-                                Logger.Log("      " + conduitStringParams[i] + ": " + cc.StringValues[i], 2);
-                            }
-                            for (int i = 0; i < cubeCableTrayDoubleParams.Length; i++)
-                            {
-                                newElem.LookupParameter(cubeCableTrayDoubleParams[i])?.Set(Math.Round(cc.DoubleValues[i], 1));
-                                Logger.Log("      " + cubeCableTrayDoubleParams[i] + ": " + Math.Round(cc.DoubleValues[i], 1).ToString(), 2);
-                            }
-                            newElem.get_Parameter(adskGparamGuid)?.Set(cc.ADSKGroup);
-                            PBCount++;
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-
-                        }
-
-                        Logger.Log("Закрываем транзакцию 6", 1);
-                        transactionCTCable.Commit();
-
-
-
-
-                    }
-
-                    //лотки и фитинги лотков
-                    Logger.Log("Лотки, фитинги лотков", 1);
-
-                    List<Element> CTelems = new List<Element>();
-                    foreach (var CT in CableTrays) CTelems.Add(doc.GetElement(CT.Id));
-                    foreach (var CTF in CableTrayFittings) CTelems.Add(doc.GetElement(CTF.Id));
-
-                    using (Transaction transactionCT = new Transaction(doc))
-                    {
-                        Logger.Log("Открываем транзакцию (лотки)", 1);
-                        transactionCT.Start("TNov - Сводная спека Лотки");
-                        foreach (var elem in CTelems)
-                        {
-#if R2022
-                        Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
-#else
-                            Logger.Log("   " + elem.Id.Value.ToString(), 2);
-#endif
-                            Element type = RevitAPI.Document.GetElement(elem.GetTypeId());
-
-                            //вычисление Наименования и Марки
-
-                            string naimValue = ""; string markValue = "";
-
-                            string manuf = "-";
-                            if (elem.Category.Name.Contains("детали") && Param.ParamExist("ADSK_Завод-изготовитель", type))
-                            {
-                                if (type.LookupParameter("ADSK_Завод-изготовитель").HasValue) manuf = type.LookupParameter("ADSK_Завод-изготовитель").AsString();
-                            }
-                            bool IEK = manuf.Contains("IEK") || manuf.Contains("«Интерэлектрокомплект");
-
-                            if (elem.Category.Name.Contains("детали") && IEK && Param.ParamExist("Наименование (IEK)", elem) && Param.ParamExist("Марка (IEK)", elem)) //фитинги IEK
-                            {
-                                naimValue = elem.LookupParameter("Наименование (IEK)").AsString();
-                                markValue = elem.LookupParameter("Марка (IEK)").AsString();
-                            }
-                            else
-                            {
-                                string param1 = type.LookupParameter("Комментарии к типоразмеру").AsString();
-                                if (param1 == null || param1.Length == 0) param1 = "проверьте Комментарии к типоразмеру";
-                                string param2 = elem.get_Parameter(BuiltInParameter.RBS_CALCULATED_SIZE).AsString().Replace("мм", "").Replace(" ", "");
-                                naimValue = param1 + " " + param2;
-                            }
-
-
-                            //вычисление Количества
-                            double countValue = 0;
-                            if (elem.Category.Name.Contains("лотки"))
-                            {
-                                Parameter paramL = elem.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH);
-                                if (paramL != null) countValue = paramL.AsDouble();
-                                countValue = countValue * 0.3048;
-                                countValue = Math.Round(countValue, 1);
-                            }
-                            else countValue = 1;
-
-                            //заполнение параметров
-                            //наименование
-                            bool success = false;
-                            bool success1 = false;
-                            bool adskNparamexist = Param.ParamExist("ADSK_Наименование", elem);
-                            if (adskNparamexist)
-                            {
-                                bool isReadOnly = elem.LookupParameter("ADSK_Наименование").IsReadOnly;
-                                if (!isReadOnly)
-                                {
-                                    try
-                                    {
-                                        elem.LookupParameter("ADSK_Наименование")?.Set(naimValue);
-                                        success1 = true;
-                                        Logger.Log("      назначено " + naimValue, 2);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Logger.Log("      Ошибка: " + ex.Message, 4);
-                                    }
-                                }
-                                else success1 = true;
-                            }
-                            else
-                            {
-                                bool adskCparamexistType = Param.ParamExist("ADSK_Наименование", type);
-                                if (adskCparamexistType) //наименование назначено по типу
-                                {
-                                    success1 = true;
-                                }
-                            }
-                            bool success2 = false;
-                            //марка
-                            bool adskMparamexist = Param.ParamExistByGuid(adskMarkparamGuid, elem);
-                            if (adskMparamexist && elem.Category.Name.Contains("детали") && IEK)
-                            {
-                                bool isReadOnly = elem.get_Parameter(adskMarkparamGuid).IsReadOnly;
-                                if (!isReadOnly)
-                                {
-                                    try
-                                    {
-                                        elem.get_Parameter(adskMarkparamGuid)?.Set(markValue);
-                                        Logger.Log("      назначено " + naimValue, 2);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Logger.Log("      Ошибка: " + ex.Message, 4);
-                                    }
-                                }
-                                else success1 = true;
-                            }
-                            //количество
-                            bool adskCparamexist = Param.ParamExistByGuid(adskCparamGuid, elem);
-                            if (adskCparamexist)
-                            {
-                                double currentC = elem.get_Parameter(adskCparamGuid).AsDouble();
-                                if (countValue == 1 && currentC > 0) //количество уже назначено в семействе по экз
-                                {
-                                    success2 = true;
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        elem.get_Parameter(adskCparamGuid)?.Set(countValue);
-                                        success2 = true;
-                                        Logger.Log("      назначено " + countValue.ToString(), 2);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Logger.Log("      Ошибка: " + ex.Message, 4);
-                                    }
-                                }
-
-                            }
-                            else
-                            {
-                                bool adskCparamexistType = Param.ParamExistByGuid(adskCparamGuid, type); //количество уже назначено в семействе по типу
-                                if (adskCparamexistType)
-                                {
-                                    double currentC = type.get_Parameter(adskCparamGuid).AsDouble();
-                                    if (countValue == 1 && currentC > 0)
-                                    {
-                                        success2 = true;
-                                    }
-                                }
-                            }
-                            success = success1 && success2;
-#if R2022
-                            if (!success) { failed.Add(elem.Id.IntegerValue.ToString()); failscount++; }
-#else
-                            if (!success) { failed.Add(elem.Id.Value.ToString()); failscount++; }
-#endif
-                            PBCount++;
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-
-                        }
-                        transactionCT.Commit();
-                        Logger.Log("Закрываем транзакцию (лотки)", 1);
-                    }
-
-                    //электрооборудование + пожарная сигнализация
-                    List<Element> SSelems = new List<Element>();
-                    foreach (var FA in FireAlarmDevices) SSelems.Add(doc.GetElement(FA.Id));
-                    foreach (var EE in elEq) SSelems.Add(doc.GetElement(EE.Id));
-
-                    using (Transaction transactionSS = new Transaction(doc))
-                    {
-                        Logger.Log("Открываем транзакцию (оборудование)", 1);
-                        transactionSS.Start("TNov - Сводная спека Оборудование");
-                        foreach (var elem in SSelems)
-                        {
-#if R2022
-                        Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
-#else
-                            Logger.Log("   " + elem.Id.Value.ToString(), 2);
-#endif
-                            Element type = RevitAPI.Document.GetElement(elem.GetTypeId());
-
-                            //заполнение параметров
-                            bool success = false;
-
-                            bool adskCparamexist = Param.ParamExistByGuid(adskCparamGuid, elem);
-                            if (adskCparamexist)
-                            {
-                                double currentC = elem.get_Parameter(adskCparamGuid).AsDouble();
-                                if (currentC == 1) //количество назначено 1 по экз
-                                {
-                                    success = true;
-                                }
-                                else
-                                {
-                                    try
-                                    {
-                                        elem.get_Parameter(adskCparamGuid)?.Set(1);
-                                        success = true;
-                                        Logger.Log("      назначено 1", 2);
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        Logger.Log("      Ошибка: " + ex.Message, 4);
-                                    }
-                                }
-
-                            }
-                            else
-                            {
-                                bool adskCparamexistType = Param.ParamExistByGuid(adskCparamGuid, type); //количество назначено 1 по типу
-                                if (adskCparamexistType)
-                                {
-                                    double currentC = type.get_Parameter(adskCparamGuid).AsDouble();
-                                    if (currentC == 1) //количество назначено 1 по экз
-                                    {
-                                        success = true;
-                                    }
-                                }
-                            }
-#if R2022
-                            if (!success) { failed.Add(elem.Id.IntegerValue.ToString()); failscount++; }
-#else
-                            if (!success) { failed.Add(elem.Id.Value.ToString()); failscount++; }
-#endif
-
-                            PBCount++;
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
-                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
-
-                        }
-                        transactionSS.Commit();
-                        Logger.Log("Закрываем транзакцию (оборудование)", 1);
-                    }
-
-                    this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() => this.adskgProgressBar.Close()));
-
-                    if (allcount == 0) new InfoWindow280("Нечего обрабатывать.").ShowDialog();
-
-                    group.Assimilate();
-                }
-
-
-
-
-
-                if (failscount > 0)
+                    Doc = doc,
+                    UiApp = uiApp,
+                    ElEq = elEq,
+                    CableTrays = CableTrays,
+                    CableTrayFittings = CableTrayFittings,
+                    Conduit = Conduit,
+                    FireAlarmDevices = FireAlarmDevices,
+                    GMs = GMs,
+                    ConduitTypes = ConduitTypes,
+                    CableTrayTypes = CableTrayTypes,
+                    ConduitCoeff = conduitCoeff,
+                    ConduitCoeffPipe = conduitCoeffPipe,
+                    ConduitStep = conduitStep,
+                    CableTrayCoeffCable = cableTrayCoeffCable,
+                    DBCommandName = DBCommandName,
+                    DateTime = dateTime,
+                    TNovVersion = TNovVersion
+                };
+
+                Logger.Log("Окно типов коробов и лотков. Ожидание подтверждения.", 1);
+                MEPSpecSSTypePreviewHost.Show(uiApp, typePreviewRows, () =>
                 {
-                    Logger.Log("Открываем окно с ID проблемных элементов: " + String.Join(",", failed), 1);
-                    // Диалоговое окно
-                    ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed),DBCommandName,dateTime,TNovVersion);
-                    window.Show();
-                }
-
+                    command.StartSSProgressBar();
+                    MEPSpecSSPreflightRevitBridge.Enqueue(_ => command.RunSSTransactions(ssCtx));
+                });
+                return Result.Succeeded;
 
             }
 #endregion
@@ -2293,7 +1188,7 @@ namespace TNovMEPSpec
                                     if (runncat) success2 = MEPSpecTools.SetNCategory(a.Id);
                                     if (!success2) { failed2.Add(a.Id.ToString()); failscount++; }
                                     bool success3 = true;
-                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName);
+                                    if (runadskp) success3 = MEPSpecTools.Setadskpparam(a.Id, cat, docName, viewModel.countDuctFuttingInsulation);
                                     if (!success3) { failed3.Add(a.Id.ToString()); failscount++; }
                                 }
                             }
@@ -2654,6 +1549,935 @@ namespace TNovMEPSpec
             Logger.Log("Завершение работы.", 5);
             return Result.Succeeded;
         }
+        internal void RunSSTransactions(SSRunContext ctx)
+        {
+            Document doc = ctx.Doc;
+            UIApplication uiApp = ctx.UiApp;
+            List<FamilyInstance> elEq = ctx.ElEq;
+            List<CableTray> CableTrays = ctx.CableTrays;
+            List<FamilyInstance> CableTrayFittings = ctx.CableTrayFittings;
+            List<Conduit> Conduit = ctx.Conduit;
+            List<FamilyInstance> FireAlarmDevices = ctx.FireAlarmDevices;
+            List<Element> GMs = ctx.GMs;
+            List<string> ConduitTypes = ctx.ConduitTypes;
+            List<string> CableTrayTypes = ctx.CableTrayTypes;
+            double conduitCoeff = ctx.ConduitCoeff;
+            double conduitCoeffPipe = ctx.ConduitCoeffPipe;
+            double conduitStep = ctx.ConduitStep;
+            double cableTrayCoeffCable = ctx.CableTrayCoeffCable;
+            string DBCommandName = ctx.DBCommandName;
+            DateTime dateTime = ctx.DateTime;
+            string TNovVersion = ctx.TNovVersion;
+            int failscount = 0;
+            List<string> failed = new List<string>();
+
+            try
+            {
+                using (TransactionGroup group = new TransactionGroup(RevitAPI.Document, "TNov - Сводная спека"))
+                {
+                    group.Start();
+
+                    //короба
+                    /*
+                    Logger.Log("Короба. Очищаем параметры со сброшенным ключом");
+                    using (Transaction transactionConduitPars = new Transaction(doc))
+                    {
+                        transactionConduitPars.Start("TNov - Сводная спека (короба чистка параметров)");
+                        Logger.Log("Открываем транзакцию 01", 1);
+
+                        foreach (var cond in Conduit)
+                        {
+                            Element c = doc.GetElement(cond.Id);
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 1") == false)
+                            {
+                                try
+                                {
+                                    if(c.LookupParameter("RBZ_Пучок1_Ед.измерения").IsReadOnly==false) c.LookupParameter("RBZ_Пучок1_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок1_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок1_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок1_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок1_Производитель").Set("");
+                                }
+                                catch { }
+                            }
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 2") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Пучок2_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок2_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок2_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок2_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок2_Производитель").Set("");
+                                }
+                                catch { }
+                            }
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 3") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Пучок3_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок3_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок3_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок3_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок3_Производитель").Set("");
+                            }
+                                catch { }
+                        }
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 4") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Пучок4_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок4_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок4_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок4_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок4_Производитель").Set("");
+                        }
+                                catch { }
+                    }
+                            if (MEPSpecTools.IsIdParamSet(c, "Кабель тип 5") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Пучок5_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок5_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок5_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Пучок5_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Пучок5_Производитель").Set("");
+                    }
+                                catch { }
+                }
+                            if (MEPSpecTools.IsIdParamSet(c, "Труба") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Труба_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Труба_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Труба_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Труба_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Производитель").Set("");
+                                    if (c.LookupParameter("RBZ_Труба_Артикул").IsReadOnly == false) c.LookupParameter("RBZ_Труба_Артикул").Set("");
+                }
+                                catch { }
+            }
+                            if (MEPSpecTools.IsIdParamSet(c, "Крепеж") == false)
+                            {
+                                try
+                                {
+                                    if (c.LookupParameter("RBZ_Крепеж_Ед.измерения").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Ед.измерения").Set("");
+                                    if (c.LookupParameter("RBZ_Крепеж_Марка").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Марка").Set("");
+                                    if (c.LookupParameter("RBZ_Крепеж_Описание").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Описание").Set("");
+                                    if (c.LookupParameter("RBZ_Крепеж_Производитель").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Производитель").Set("");
+                                    if (c.LookupParameter("RBZ_Крепеж_Артикул").IsReadOnly == false) c.LookupParameter("RBZ_Крепеж_Артикул").Set("");
+            }
+                                catch { }
+        }
+                        }
+
+                        Logger.Log("Закрываем транзакцию 1", 1);
+                        transactionConduitPars.Commit();
+                    }
+                    */
+
+                    int allcount = elEq.Count + CableTrays.Count + CableTrayFittings.Count + ConduitTypes.Count + CableTrayTypes.Count + FireAlarmDevices.Count;
+
+                    StartSSProgressBar();
+
+                    int PBCount = 0;
+                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Minimum = (double)PBCount));
+                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Maximum = (double)allcount));
+                    this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.maxvalue.Text = allcount.ToString()));
+                    this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() =>
+                    {
+                        if (adskgProgressBar.info != null)
+                            adskgProgressBar.info.Text = "";
+                    }));
+
+
+
+                    Logger.Log("Короба. Ищем кубики", 1);
+
+                    int j = 0;
+                    ICollection<ElementId> GMsToRemove = new List<ElementId>();
+                    int cubeId = -1;
+                    foreach (FamilyInstance GM0 in GMs)
+                    {
+                        Element e = RevitAPI.Document.GetElement(GM0.Id);
+                        string familyName0 = GM0.Symbol.FamilyName;
+                        Element eType0 = RevitAPI.Document.GetElement(e.GetTypeId());
+                        if (familyName0.Contains("pmN.Условное семейство СС ПС") && eType0.Name.Contains("Короб"))
+                        {
+                            j++;
+                            if (j == 1) //первый кубик данного типа - очищаем параметры
+                            {
+                                e.LookupParameter("Короб_Кабель_1_Количество")?.Set(0);
+                                e.LookupParameter("Короб_Кабель_2_Количество")?.Set(0);
+                                e.LookupParameter("Короб_Кабель_3_Количество")?.Set(0);
+                                e.LookupParameter("Короб_Кабель_4_Количество")?.Set(0);
+                                e.LookupParameter("Короб_Кабель_5_Количество")?.Set(0);
+                                e.LookupParameter("Короб_Крепеж_Количество")?.Set(0);
+                                e.LookupParameter("Короб_Труба_Количество")?.Set(0);
+#if R2022
+                                cubeId = GM0.Id.IntegerValue;
+#else
+                                cubeId = (int)GM0.Id.Value;
+#endif
+                                Logger.Log("   Первый кубик найден и обработан", 2);
+                            }
+                            if (j > 1) GMsToRemove.Add(GM0.Id); //последующие кубики данного типа - в список на удаление
+                        }
+
+                    }
+                    if (j > 1)
+                    {
+                        using (Transaction transactionCubes = new Transaction(doc))
+                        {
+                            transactionCubes.Start("TNov - Сводная спека (короба кубики)");
+                            Logger.Log("Открываем транзакцию 1", 1);
+
+                            RevitAPI.Document.Delete(GMsToRemove.ToArray());
+                            Logger.Log("   Удалены остальные кубики в количестве: " + GMsToRemove.Count.ToString(), 1);
+
+                            Logger.Log("Закрываем транзакцию 1", 1);
+                            transactionCubes.Commit();
+                        }
+
+
+                    }
+                    else if (j == 0)
+                    {
+                        Logger.Log("   Кубик с типом Короб отсутствует в модели. Завершение работы.", 3);
+                        new InfoWindow280("Отсутствует хотя бы 1 размещенный экземпляр семейства pmN.Условное семейство СС ПС с типом Короб. " +
+                            "Разместите его в любом удобном месте в модели.").ShowDialog();
+                        this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() => this.adskgProgressBar.Close()));
+                        return;
+                    }
+
+                    //собираем данные с коробов исходя из принципиальных типов
+                    Logger.Log("Формируем данные для кубиков", 1);
+
+                    List<ConduitCube> cubes = new List<ConduitCube>();
+                    /*
+                    List<Conduit> Conduit1 = new FilteredElementCollector(doc).OfCategory(BuiltInCategory.OST_Conduit)
+                                                                 .WhereElementIsNotElementType()
+                                                                 .Cast<Conduit>()
+                                                                 .ToList();
+                    */
+                    foreach (var cType in ConduitTypes)
+                    {
+                        Logger.Log("   " + cType, 2);
+
+                        List<Element> cTypeElems = new List<Element>(); //пустой список коробов
+                        foreach (var c in Conduit)
+                        {
+#if R2022
+                            string cType1 =
+                        c.get_Parameter(adskGparamGuid).AsString() +
+                        c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 2").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
+                        c.LookupParameter("Труба").AsElementId().IntegerValue.ToString() +
+                        c.LookupParameter("Крепеж").AsElementId().IntegerValue.ToString();
+#else
+                            string cType1 =
+                        c.get_Parameter(adskGparamGuid).AsString() +
+                        c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString() +
+                        c.LookupParameter("Труба").AsElementId().Value.ToString() +
+                        c.LookupParameter("Крепеж").AsElementId().Value.ToString();
+#endif
+                            if (cType1 == cType)
+                            {
+                                cTypeElems.Add(doc.GetElement(c.Id));
+                                Logger.Log("      " + c.Id.ToString(), 2);
+                            }
+                        }
+                        List<string> stringValues = new List<string>();
+                        List<double> doubleValues = new List<double>();
+                        List<string> cableGroupStringValues = new List<string>();
+                        string gvalue = "";
+
+                        int cableCounter = 0; //счетчик для считывания кол-ва кабеля
+
+                        Element firstElem = cTypeElems.First();
+
+                        for(int i=0; i< cableGroupStringParams.Length;i++) //группирование для пучков
+                        {
+                            string paramName = cableGroupStringParams[i];
+                            string val = "";
+                            if (Param.ParamExist(paramName, firstElem) && firstElem.LookupParameter(paramName).HasValue)
+                            {
+                                val=firstElem.LookupParameter(paramName).AsString();
+                            }
+                            else if (Param.ParamExistByGuid(adskGparamGuid, firstElem) && firstElem.get_Parameter(adskGparamGuid).HasValue)
+                            {
+                                val=firstElem.get_Parameter(adskGparamGuid).AsString();
+                            }
+                            cableGroupStringValues.Add(val); Logger.Log("      " + val, 2);
+                        }
+
+                        for (int i = 0; i < conduitStringParams.Length; i++) //проходим по списку текстовых параметров
+                        {
+                            string conduitParam = conduitStringParams[i];
+                            Logger.Log("   " + conduitParam, 2);
+                            string value = "";
+                            //получаем значение текстового параметра с первого короба в списке коробов данного типа
+                            bool cParamExist = Param.ParamExist(conduitParam, firstElem);
+                            if (cParamExist)
+                            {
+                                Parameter prm = firstElem.LookupParameter(conduitParam);
+                                bool hasValue = prm.IsReadOnly&& prm.HasValue;
+                                if (hasValue)
+                                {
+                                    string cParamValue = firstElem.LookupParameter(conduitParam).AsString();
+                                    if (cParamValue.Length > 0)
+                                    {
+                                        value = cParamValue; Logger.Log("      " + cParamValue, 2);
+                                    }
+                                    else Logger.Log("      пустое значение", 2);
+                                }
+                                else Logger.Log("      пустое значение", 2);
+                            }
+                            stringValues.Add(value);
+                            bool gParamExist = Param.ParamExistByGuid(adskGparamGuid, firstElem);
+                            if (cParamExist)
+                            {
+                                bool hasValue = firstElem.get_Parameter(adskGparamGuid).HasValue;
+                                if (hasValue)
+                                {
+                                    string gParamValue = firstElem.get_Parameter(adskGparamGuid).AsString();
+                                    if (gParamValue.Length > 0)
+                                    {
+                                        gvalue = gParamValue; Logger.Log("      " + gParamValue, 2);
+                                    }
+                                    else Logger.Log("      пустое значение", 2);
+                                }
+                                else Logger.Log("      пустое значение", 2);
+                            }
+
+
+                            if (i == 0 || i == 4 || i == 8 || i == 12 || i == 16) //кабели
+                            {
+                                cableCounter++;
+                                string cableCountParam = "Кабель тип " + cableCounter.ToString() + " колво";
+                                bool cableCountParamExist = Param.ParamExist(cableCountParam, firstElem);
+
+                                double dValue = 0;
+                                if (value.Length > 0)
+                                {
+                                    foreach (var c in cTypeElems) //прибавляем длину с каждого элемента
+                                    {
+                                        int cableCount = 1;
+                                        if (cableCountParamExist)
+                                        {
+                                            if (c.LookupParameter(cableCountParam).HasValue) cableCount = c.LookupParameter(cableCountParam).AsInteger();
+                                        }
+
+                                        dValue += c.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble() * 0.3048 * cableCount * conduitCoeff;
+                                    }
+                                }
+                                doubleValues.Add(dValue);
+                                Logger.Log("      " + dValue.ToString(), 2);
+                            }
+                            if (i == 20) //крепежи
+                            {
+                                double dValue = 0;
+                                if (value.Length > 0)
+                                {
+                                    foreach (var c in cTypeElems)
+                                    {
+                                        dValue += (int)Math.Round(c.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble() * 0.3048 * 1000 / conduitStep);
+                                    }
+                                }
+                                doubleValues.Add(dValue);
+                                Logger.Log("      " + dValue.ToString(), 2);
+                            }
+                            if (i == 25) //трубы
+                            {
+                                double dValue = 0;
+                                if (value.Length > 0)
+                                {
+                                    foreach (var c in cTypeElems) //прибавляем длину с каждого элемента
+                                    {
+                                        dValue += c.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble() * 0.3048 * conduitCoeffPipe;
+                                    }
+                                }
+                                doubleValues.Add(dValue);
+                                Logger.Log("      " + dValue.ToString(), 2);
+                            }
+                        }
+
+                        cubes.Add(new ConduitCube { Name = cType, StringValues = stringValues, DoubleValues = doubleValues, ADSKGroup = gvalue, CableGroupStringValues = cableGroupStringValues });
+                    }
+                    using (Transaction transactionConduit = new Transaction(doc))
+                    {
+                        transactionConduit.Start("TNov - Сводная спека (короба)");
+
+                        //создание элементов кубиков
+                        Logger.Log("Транзакция 2 (короба). Создаем кубики", 1);
+
+                        ElementId cubeElementId = new ElementId(cubeId); //нашли существующий кубик
+                        FamilyInstance GM = (FamilyInstance)doc.GetElement(cubeElementId);
+                        string familyName = GM.Symbol.FamilyName;
+                        Element eType = doc.GetElement(GM.GetTypeId());
+                        LocationPoint point = GM.Location as LocationPoint;
+
+                        int count = 0;
+
+                        foreach (var cc in cubes)
+                        {
+                            Logger.Log("   Тип " + cc.Name, 2);
+                            count++;
+                            XYZ newLocation = new XYZ(point.Point.X, point.Point.Y, point.Point.Z + count * 0.3048);
+                            FamilyInstance instance = RevitAPI.Document.Create.NewFamilyInstance(newLocation, GM.Symbol, StructuralType.NonStructural);
+                            Element newElem = RevitAPI.Document.GetElement(instance.Id);
+
+                            Logger.Log("      Новый элемент " + instance.Id.ToString() + ", значения параметров:", 2);
+                            //заполняем параметры кубика
+                            for (int i = 0; i < conduitStringParams.Length; i++)
+                            {
+                                newElem.LookupParameter(conduitStringParams[i])?.Set(cc.StringValues[i]);
+                                Logger.Log("      " + conduitStringParams[i] + ": " + cc.StringValues[i], 2);
+                            }
+                            for (int i = 0; i < cubeConduitDoubleParams.Length; i++)
+                            {
+                                newElem.LookupParameter(cubeConduitDoubleParams[i])?.Set(Math.Round(cc.DoubleValues[i], 1));
+                                Logger.Log("      " + cubeConduitDoubleParams[i] + ": " + Math.Round(cc.DoubleValues[i], 1).ToString(), 2);
+                            }
+                            for (int i = 0; i < cableGroupStringParams.Length; i++)
+                            {
+                                newElem.LookupParameter(cableGroupStringParams[i])?.Set(cc.CableGroupStringValues[i]);
+                                Logger.Log("      " + cableGroupStringParams[i] + ": " + cc.CableGroupStringValues[i], 2);
+                            }
+                            newElem.get_Parameter(adskGparamGuid)?.Set(cc.ADSKGroup);
+                            PBCount++;
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+
+                        }
+
+                        Logger.Log("Закрываем транзакцию 2", 1);
+                        transactionConduit.Commit();
+
+
+
+
+                    }
+
+                    //лотки (кабель)
+
+                    Logger.Log("Лотки (кабель). Ищем кубики", 1);
+
+                    List<FamilyInstance> GMs3 = new FilteredElementCollector(RevitAPI.Document).OfCategory(BuiltInCategory.OST_GenericModel)   //фильтр по категории Об модели
+                                                                                        .WhereElementIsNotElementType()
+                                                                                        .OfClass(typeof(FamilyInstance))
+                                                                                        .Cast<FamilyInstance>()
+                                                                                        .ToList();
+
+                    int k = 0;
+                    ICollection<ElementId> GMsToRemove3 = new List<ElementId>();
+                    int cubeId3 = -1;
+                    foreach (FamilyInstance GM0 in GMs3)
+                    {
+                        Element e = RevitAPI.Document.GetElement(GM0.Id);
+                        string familyName0 = GM0.Symbol.FamilyName;
+                        Element eType0 = RevitAPI.Document.GetElement(e.GetTypeId());
+                        if (familyName0.Contains("pmN.Условное семейство СС ПС") && eType0.Name.Contains("Лоток"))
+                        {
+                            k++;
+                            if (k == 1) //первый кубик данного типа - очищаем параметры
+                            {
+                                e.LookupParameter("Лоток_Кабель_1_Количество")?.Set(0);
+                                e.LookupParameter("Лоток_Кабель_2_Количество")?.Set(0);
+                                e.LookupParameter("Лоток_Кабель_3_Количество")?.Set(0);
+                                e.LookupParameter("Лоток_Кабель_4_Количество")?.Set(0);
+                                e.LookupParameter("Лоток_Кабель_5_Количество")?.Set(0);
+#if R2022
+                                cubeId3 = GM0.Id.IntegerValue;
+#else
+                                cubeId3 = (int)GM0.Id.Value;
+#endif
+                                Logger.Log("   Первый кубик найден и обработан", 2);
+                            }
+                            if (k > 1) GMsToRemove3.Add(GM0.Id); //последующие кубики данного типа - в список на удаление
+                        }
+
+                    }
+                    if (k > 1)
+                    {
+                        using (Transaction transactionCubesCT = new Transaction(doc))
+                        {
+                            transactionCubesCT.Start("TNov - Сводная спека (лотки кубики)");
+                            Logger.Log("Открываем транзакцию 5", 1);
+
+                            RevitAPI.Document.Delete(GMsToRemove3.ToArray());
+                            Logger.Log("   Удалены остальные кубики в количестве: " + GMsToRemove3.Count.ToString(), 1);
+
+                            Logger.Log("Закрываем транзакцию 5", 1);
+                            transactionCubesCT.Commit();
+                        }
+
+
+                    }
+                    else if (k == 0)
+                    {
+                        Logger.Log("   Кубик с типом Лоток отсутствует в модели. Завершение работы.", 3);
+                        new InfoWindow280("Отсутствует хотя бы 1 размещенный экземпляр семейства pmN.Условное семейство СС ПС с типом Лоток. " +
+                            "Разместите его в любом удобном месте в модели.").ShowDialog();
+                        this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() => this.adskgProgressBar.Close()));
+                        return;
+                    }
+
+                    List<FamilyInstance> GMs4 = new FilteredElementCollector(RevitAPI.Document).OfCategory(BuiltInCategory.OST_GenericModel)   //фильтр по категории Об модели
+                                                                                        .WhereElementIsNotElementType()
+                                                                                        .OfClass(typeof(FamilyInstance))
+                                                                                        .Cast<FamilyInstance>()
+                                                                                        .ToList();
+
+                    //собираем данные с лотков исходя из принципиальных типов
+                    Logger.Log("Формируем данные для кубиков", 1);
+
+                    List<ConduitCube> cubes3 = new List<ConduitCube>();
+
+                    foreach (var cType in CableTrayTypes)
+                    {
+                        Logger.Log("   " + cType, 2);
+
+                        List<Element> cTypeElems = new List<Element>(); //пустой список лотков
+                        foreach (var c in CableTrays)
+                        {
+#if R2022
+                    string cType1 =
+                        c.get_Parameter(adskGparamGuid).AsString() +
+                        c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 2").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                        c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
+#else
+                            string cType1 =
+                                c.get_Parameter(adskGparamGuid).AsString() +
+                                c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                                c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                                c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                                c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                                c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
+#endif
+
+                            if (cType1 == cType)
+                            {
+                                cTypeElems.Add(doc.GetElement(c.Id));
+                                Logger.Log("      " + c.Id.ToString(), 2);
+                            }
+                        }
+                        List<string> stringValues = new List<string>();
+                        List<double> doubleValues = new List<double>();
+                        List<string> cableGroupStringValues = new List<string>();
+                        string gvalue = "";
+
+                        int cableCounter = 0; //счетчик для считывания кол-ва кабеля
+
+                        Element firstElem = cTypeElems.First();
+
+                        for (int i = 0; i < cableGroupStringParams.Length; i++) //группирование для пучков
+                        {
+                            string paramName = cableGroupStringParams[i];
+                            string val = "";
+                            if (Param.ParamExist(paramName, firstElem) && firstElem.LookupParameter(paramName).HasValue)
+                            {
+                                val = firstElem.LookupParameter(paramName).AsString();
+                            }
+                            else if (Param.ParamExistByGuid(adskGparamGuid, firstElem) && firstElem.get_Parameter(adskGparamGuid).HasValue)
+                            {
+                                val = firstElem.get_Parameter(adskGparamGuid).AsString();
+                            }
+                            cableGroupStringValues.Add(val); Logger.Log("      " + val, 2);
+                        }
+
+                        for (int i = 0; i < 20; i++) //проходим по списку текстовых параметров (20 - только параметры кабеля)
+                        {
+                            string conduitParam = conduitStringParams[i];
+                            Logger.Log("   " + conduitParam, 2);
+                            string value = "";
+                            //получаем значение текстового параметра с первого лотка в списке лотков данного типа
+                            bool cParamExist = Param.ParamExist(conduitParam, firstElem);
+                            if (cParamExist)
+                            {
+                                Parameter prm = firstElem.LookupParameter(conduitParam);
+                                bool hasValue = prm.IsReadOnly && prm.HasValue;
+                                if (hasValue)
+                                {
+                                    string cParamValue = firstElem.LookupParameter(conduitParam).AsString();
+                                    if (cParamValue.Length > 0)
+                                    {
+                                        value = cParamValue; Logger.Log("      " + cParamValue, 2);
+                                    }
+                                    else Logger.Log("      пустое значение", 2);
+                                }
+                                else Logger.Log("      пустое значение", 2);
+                            }
+                            stringValues.Add(value);
+                            bool gParamExist = Param.ParamExistByGuid(adskGparamGuid, firstElem);
+                            if (cParamExist)
+                            {
+                                bool hasValue = firstElem.get_Parameter(adskGparamGuid).HasValue;
+                                if (hasValue)
+                                {
+                                    string gParamValue = firstElem.get_Parameter(adskGparamGuid).AsString();
+                                    if (gParamValue.Length > 0)
+                                    {
+                                        gvalue = gParamValue; Logger.Log("      " + gParamValue, 2);
+                                    }
+                                    else Logger.Log("      пустое значение", 2);
+                                }
+                                else Logger.Log("      пустое значение", 2);
+                            }
+
+
+                            if (i == 0 || i == 4 || i == 8 || i == 12 || i == 16) //кабели
+                            {
+                                cableCounter++;
+                                string cableCountParam = "Кабель тип " + cableCounter.ToString() + " колво";
+                                bool cableCountParamExist = Param.ParamExist(cableCountParam, firstElem);
+
+                                double dValue = 0;
+                                if (value.Length > 0)
+                                {
+                                    foreach (var c in cTypeElems) //прибавляем длину с каждого элемента
+                                    {
+                                        int cableCount = 1;
+                                        if (cableCountParamExist)
+                                        {
+                                            if (c.LookupParameter(cableCountParam).HasValue) cableCount = c.LookupParameter(cableCountParam).AsInteger();
+                                        }
+
+                                        dValue += c.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH).AsDouble() * 0.3048 * cableCount * cableTrayCoeffCable;
+                                    }
+                                }
+                                doubleValues.Add(dValue);
+                                Logger.Log("      " + dValue.ToString(), 2);
+                            }
+
+                        }
+
+                        cubes3.Add(new ConduitCube { Name = cType, StringValues = stringValues, DoubleValues = doubleValues, ADSKGroup = gvalue, CableGroupStringValues = cableGroupStringValues });
+                    }
+                    using (Transaction transactionCTCable = new Transaction(doc))
+                    {
+                        transactionCTCable.Start("TNov - Сводная спека (кабели в лотках)");
+
+                        //создание элементов кубиков
+                        Logger.Log("Транзакция 6 (кабели в лотках). Создаем кубики", 1);
+
+                        ElementId cubeElementId = new ElementId(cubeId3); //нашли существующий кубик
+                        FamilyInstance GM = (FamilyInstance)doc.GetElement(cubeElementId);
+                        string familyName = GM.Symbol.FamilyName;
+                        Element eType = doc.GetElement(GM.GetTypeId());
+                        LocationPoint point = GM.Location as LocationPoint;
+
+                        int count = 0;
+
+                        foreach (var cc in cubes3)
+                        {
+                            Logger.Log("   Тип " + cc.Name, 2);
+                            count++;
+                            XYZ newLocation = new XYZ(point.Point.X, point.Point.Y, point.Point.Z + count * 0.3048);
+                            FamilyInstance instance = RevitAPI.Document.Create.NewFamilyInstance(newLocation, GM.Symbol, StructuralType.NonStructural);
+                            Element newElem = RevitAPI.Document.GetElement(instance.Id);
+
+                            Logger.Log("      Новый элемент " + instance.Id.ToString() + ", значения параметров:", 2);
+                            //заполняем параметры кубика
+                            for (int i = 0; i < 20; i++)
+                            {
+                                newElem.LookupParameter(conduitStringParams[i])?.Set(cc.StringValues[i]);
+                                Logger.Log("      " + conduitStringParams[i] + ": " + cc.StringValues[i], 2);
+                            }
+                            for (int i = 0; i < cubeCableTrayDoubleParams.Length; i++)
+                            {
+                                newElem.LookupParameter(cubeCableTrayDoubleParams[i])?.Set(Math.Round(cc.DoubleValues[i], 1));
+                                Logger.Log("      " + cubeCableTrayDoubleParams[i] + ": " + Math.Round(cc.DoubleValues[i], 1).ToString(), 2);
+                            }
+                            for (int i = 0; i < cableGroupStringParams.Length; i++)
+                            {
+                                newElem.LookupParameter(cableGroupStringParams[i])?.Set(cc.CableGroupStringValues[i]);
+                                Logger.Log("      " + cableGroupStringParams[i] + ": " + cc.CableGroupStringValues[i], 2);
+                            }
+                            newElem.get_Parameter(adskGparamGuid)?.Set(cc.ADSKGroup);
+                            PBCount++;
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+
+                        }
+
+                        Logger.Log("Закрываем транзакцию 6", 1);
+                        transactionCTCable.Commit();
+
+
+
+
+                    }
+
+                    //лотки и фитинги лотков
+                    Logger.Log("Лотки, фитинги лотков", 1);
+
+                    List<Element> CTelems = new List<Element>();
+                    foreach (var CT in CableTrays) CTelems.Add(doc.GetElement(CT.Id));
+                    foreach (var CTF in CableTrayFittings) CTelems.Add(doc.GetElement(CTF.Id));
+
+                    using (Transaction transactionCT = new Transaction(doc))
+                    {
+                        Logger.Log("Открываем транзакцию (лотки)", 1);
+                        transactionCT.Start("TNov - Сводная спека Лотки");
+                        foreach (var elem in CTelems)
+                        {
+#if R2022
+                        Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
+#else
+                            Logger.Log("   " + elem.Id.Value.ToString(), 2);
+#endif
+                            Element type = RevitAPI.Document.GetElement(elem.GetTypeId());
+
+                            //вычисление Наименования и Марки
+
+                            string naimValue = ""; string markValue = "";
+
+                            string manuf = "-";
+                            if (elem.Category.Name.Contains("детали") && Param.ParamExist("ADSK_Завод-изготовитель", type))
+                            {
+                                if (type.LookupParameter("ADSK_Завод-изготовитель").HasValue) manuf = type.LookupParameter("ADSK_Завод-изготовитель").AsString();
+                            }
+                            bool IEK = manuf.Contains("IEK") || manuf.Contains("«Интерэлектрокомплект");
+
+                            if (elem.Category.Name.Contains("детали") && IEK && Param.ParamExist("Наименование (IEK)", elem) && Param.ParamExist("Марка (IEK)", elem)) //фитинги IEK
+                            {
+                                naimValue = elem.LookupParameter("Наименование (IEK)").AsString();
+                                markValue = elem.LookupParameter("Марка (IEK)").AsString();
+                            }
+                            else
+                            {
+                                string param1 = type.LookupParameter("Комментарии к типоразмеру").AsString();
+                                if (param1 == null || param1.Length == 0) param1 = "проверьте Комментарии к типоразмеру";
+                                string param2 = elem.get_Parameter(BuiltInParameter.RBS_CALCULATED_SIZE).AsString().Replace("мм", "").Replace(" ", "");
+                                naimValue = param1 + " " + param2;
+                            }
+
+
+                            //вычисление Количества
+                            double countValue = 0;
+                            if (elem.Category.Name.Contains("лотки"))
+                            {
+                                Parameter paramL = elem.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH);
+                                if (paramL != null) countValue = paramL.AsDouble();
+                                countValue = countValue * 0.3048;
+                                countValue = Math.Round(countValue, 1);
+                            }
+                            else countValue = 1;
+
+                            //заполнение параметров
+                            //наименование
+                            bool success = false;
+                            bool success1 = false;
+                            bool adskNparamexist = Param.ParamExist("ADSK_Наименование", elem);
+                            if (adskNparamexist)
+                            {
+                                bool isReadOnly = elem.LookupParameter("ADSK_Наименование").IsReadOnly;
+                                if (!isReadOnly)
+                                {
+                                    try
+                                    {
+                                        elem.LookupParameter("ADSK_Наименование")?.Set(naimValue);
+                                        success1 = true;
+                                        Logger.Log("      назначено " + naimValue, 2);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Logger.Log("      Ошибка: " + ex.Message, 4);
+                                    }
+                                }
+                                else success1 = true;
+                            }
+                            else
+                            {
+                                bool adskCparamexistType = Param.ParamExist("ADSK_Наименование", type);
+                                if (adskCparamexistType) //наименование назначено по типу
+                                {
+                                    success1 = true;
+                                }
+                            }
+                            bool success2 = false;
+                            //марка
+                            bool adskMparamexist = Param.ParamExistByGuid(adskMarkparamGuid, elem);
+                            if (adskMparamexist && elem.Category.Name.Contains("детали") && IEK)
+                            {
+                                bool isReadOnly = elem.get_Parameter(adskMarkparamGuid).IsReadOnly;
+                                if (!isReadOnly)
+                                {
+                                    try
+                                    {
+                                        elem.get_Parameter(adskMarkparamGuid)?.Set(markValue);
+                                        Logger.Log("      назначено " + naimValue, 2);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Logger.Log("      Ошибка: " + ex.Message, 4);
+                                    }
+                                }
+                                else success1 = true;
+                            }
+                            //количество
+                            bool adskCparamexist = Param.ParamExistByGuid(adskCparamGuid, elem);
+                            if (adskCparamexist)
+                            {
+                                double currentC = elem.get_Parameter(adskCparamGuid).AsDouble();
+                                if (countValue == 1 && currentC > 0) //количество уже назначено в семействе по экз
+                                {
+                                    success2 = true;
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        elem.get_Parameter(adskCparamGuid)?.Set(countValue);
+                                        success2 = true;
+                                        Logger.Log("      назначено " + countValue.ToString(), 2);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Logger.Log("      Ошибка: " + ex.Message, 4);
+                                    }
+                                }
+
+                            }
+                            else
+                            {
+                                bool adskCparamexistType = Param.ParamExistByGuid(adskCparamGuid, type); //количество уже назначено в семействе по типу
+                                if (adskCparamexistType)
+                                {
+                                    double currentC = type.get_Parameter(adskCparamGuid).AsDouble();
+                                    if (countValue == 1 && currentC > 0)
+                                    {
+                                        success2 = true;
+                                    }
+                                }
+                            }
+                            success = success1 && success2;
+#if R2022
+                            if (!success) { failed.Add(elem.Id.IntegerValue.ToString()); failscount++; }
+#else
+                            if (!success) { failed.Add(elem.Id.Value.ToString()); failscount++; }
+#endif
+                            PBCount++;
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+
+                        }
+                        transactionCT.Commit();
+                        Logger.Log("Закрываем транзакцию (лотки)", 1);
+                    }
+
+                    //электрооборудование + пожарная сигнализация
+                    List<Element> SSelems = new List<Element>();
+                    foreach (var FA in FireAlarmDevices) SSelems.Add(doc.GetElement(FA.Id));
+                    foreach (var EE in elEq) SSelems.Add(doc.GetElement(EE.Id));
+
+                    using (Transaction transactionSS = new Transaction(doc))
+                    {
+                        Logger.Log("Открываем транзакцию (оборудование)", 1);
+                        transactionSS.Start("TNov - Сводная спека Оборудование");
+                        foreach (var elem in SSelems)
+                        {
+#if R2022
+                        Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
+#else
+                            Logger.Log("   " + elem.Id.Value.ToString(), 2);
+#endif
+                            Element type = RevitAPI.Document.GetElement(elem.GetTypeId());
+
+                            //заполнение параметров
+                            bool success = false;
+
+                            bool adskCparamexist = Param.ParamExistByGuid(adskCparamGuid, elem);
+                            if (adskCparamexist)
+                            {
+                                double currentC = elem.get_Parameter(adskCparamGuid).AsDouble();
+                                if (currentC == 1) //количество назначено 1 по экз
+                                {
+                                    success = true;
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        elem.get_Parameter(adskCparamGuid)?.Set(1);
+                                        success = true;
+                                        Logger.Log("      назначено 1", 2);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        Logger.Log("      Ошибка: " + ex.Message, 4);
+                                    }
+                                }
+
+                            }
+                            else
+                            {
+                                bool adskCparamexistType = Param.ParamExistByGuid(adskCparamGuid, type); //количество назначено 1 по типу
+                                if (adskCparamexistType)
+                                {
+                                    double currentC = type.get_Parameter(adskCparamGuid).AsDouble();
+                                    if (currentC == 1) //количество назначено 1 по экз
+                                    {
+                                        success = true;
+                                    }
+                                }
+                            }
+#if R2022
+                            if (!success) { failed.Add(elem.Id.IntegerValue.ToString()); failscount++; }
+#else
+                            if (!success) { failed.Add(elem.Id.Value.ToString()); failscount++; }
+#endif
+
+                            PBCount++;
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<double>((Func<double>)(() => this.adskgProgressBar.TNov_ProgressBar.Value = (double)PBCount));
+                            this.adskgProgressBar.TNov_ProgressBar.Dispatcher.Invoke<string>((Func<string>)(() => this.adskgProgressBar.value.Text = PBCount.ToString()));
+
+                        }
+                        transactionSS.Commit();
+                        Logger.Log("Закрываем транзакцию (оборудование)", 1);
+                    }
+
+                    this.adskgProgressBar.Dispatcher.Invoke((System.Action)(() => this.adskgProgressBar.Close()));
+
+                    if (allcount == 0) new InfoWindow280("Нечего обрабатывать.").ShowDialog();
+
+                    group.Assimilate();
+                }
+
+
+
+
+
+                if (failscount > 0)
+                {
+                    Logger.Log("Открываем окно с ID проблемных элементов: " + String.Join(",", failed), 1);
+                    // Диалоговое окно
+                    ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed),DBCommandName,dateTime,TNovVersion);
+                    window.Show();
+                }
+
+
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Ошибка при выполнении транзакций СС: " + ex.Message, 4);
+                CloseProgressBarSafely();
+            }
+            finally
+            {
+                Logger.Log("Завершение работы.", 5);
+            }
+        }
         private void CloseProgressBarSafely()
         {
             if (adskgProgressBar != null &&
@@ -2671,4 +2495,26 @@ namespace TNovMEPSpec
         }
 
     }
+
+    internal sealed class SSRunContext
+    {
+        public Document Doc;
+        public UIApplication UiApp;
+        public List<FamilyInstance> ElEq;
+        public List<CableTray> CableTrays;
+        public List<FamilyInstance> CableTrayFittings;
+        public List<Conduit> Conduit;
+        public List<FamilyInstance> FireAlarmDevices;
+        public List<Element> GMs;
+        public List<string> ConduitTypes;
+        public List<string> CableTrayTypes;
+        public double ConduitCoeff;
+        public double ConduitCoeffPipe;
+        public double ConduitStep;
+        public double CableTrayCoeffCable;
+        public string DBCommandName;
+        public DateTime DateTime;
+        public string TNovVersion;
+    }
+
 }

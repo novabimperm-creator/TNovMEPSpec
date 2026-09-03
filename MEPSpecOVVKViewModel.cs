@@ -48,6 +48,7 @@ namespace TNovMEPSpec
         private bool _run7 = true; private bool _run8 = true; private bool _run9 = true; private bool _run10 = true; private bool _run11 = true; private bool _run12 = true;
         private bool _run13 = true; private bool _run14 = true;
         private bool _runNonModel = true; private bool _runadskg = true; private bool _runNCat = true; private bool _runCatalogs = true; private bool _runadskp = true;
+        private bool _countDuctFuttingInsulation = true;
 
         public string output1 { get { return _output1; } set { _output1 = value; OnPropertyChanged(); } }
         public string output2 { get { return _output2; } set { _output2 = value; OnPropertyChanged(); } }
@@ -89,6 +90,7 @@ namespace TNovMEPSpec
         public bool runNonModel { get { return _runNonModel; } set { _runNonModel = value; OnPropertyChanged(); } }
         public bool runadskg { get { return _runadskg; } set { _runadskg = value; OnPropertyChanged(); } }
         public bool runadskp { get { return _runadskp; } set { _runadskp = value; OnPropertyChanged(); } }
+        public bool countDuctFuttingInsulation { get { return _countDuctFuttingInsulation; } set { _countDuctFuttingInsulation = value; OnPropertyChanged(); } }
         public bool runNCat { get { return _runNCat; } set { _runNCat = value; OnPropertyChanged(); } }
         public bool runCatalogs { get { return _runCatalogs; } set { _runCatalogs = value; OnPropertyChanged(); } }
         private bool _systemcut = true; public bool systemcut { get { return _systemcut; } set { _systemcut = value; OnPropertyChanged(); } }

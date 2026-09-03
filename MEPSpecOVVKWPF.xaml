@@ -495,18 +495,37 @@
                                 <ToggleButton Grid.Column="2"
                                               Style="{StaticResource CardToggleStyle}"
                                               Margin="0"
-                                              IsChecked="{Binding runNCat}">
+                                              IsChecked="{Binding countDuctFuttingInsulation}">
                                     <StackPanel>
-                                        <TextBlock Text="Заполнить N Категория"
+                                        <TextBlock Text="Считать площадь изоляции фитингов воздуховодов"
                                                    Style="{StaticResource CardTitleStyle}"
                                                    TextWrapping="Wrap"/>
-                                        <TextBlock Text="Для сортировки по категориям (оборудование сверху)"
-                                                   Style="{StaticResource CardSubtitleStyle}"/>
                                     </StackPanel>
                                 </ToggleButton>
                             </Grid>
 
-                            <Grid>
+                        <Grid Margin="0,0,0,6">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <ToggleButton Grid.Column="0"
+                  Style="{StaticResource CardToggleStyle}"
+                  Margin="0"
+                  IsChecked="{Binding runNCat}">
+                                <StackPanel>
+                                    <TextBlock Text="Заполнить N Категория"
+                       Style="{StaticResource CardTitleStyle}"
+                       TextWrapping="Wrap"/>
+                                    <TextBlock Text="Для сортировки по категориям (оборудование сверху)"
+                       Style="{StaticResource CardSubtitleStyle}"/>
+                                </StackPanel>
+                            </ToggleButton>
+                        </Grid>
+
+                        <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="8"/>

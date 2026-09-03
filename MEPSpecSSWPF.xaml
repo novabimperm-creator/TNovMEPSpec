@@ -107,48 +107,6 @@
                 </StackPanel>
             </Border>
 
-            <Border Style="{StaticResource PanelFrameStyle}" Margin="0,0,0,10">
-                <StackPanel>
-                    <TextBlock Text="Настройки цепей" Style="{StaticResource PanelHeaderStyle}"/>
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="k для кабелей"
-                                   Foreground="{StaticResource MutedBrush}"
-                                   VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ElSystemCoeffCable}"
-                                 Style="{StaticResource DarkCompactTextBoxStyle}"/>
-                    </Grid>
-                    <Grid Margin="0,0,0,6">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="k для труб"
-                                   Foreground="{StaticResource MutedBrush}"
-                                   VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ElSystemCoeffPipe}"
-                                 Style="{StaticResource DarkCompactTextBoxStyle}"/>
-                    </Grid>
-                    <Grid>
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="120"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <TextBlock Text="шаг крепежей"
-                                   Foreground="{StaticResource MutedBrush}"
-                                   VerticalAlignment="Center"/>
-                        <TextBox Grid.Column="1"
-                                 Text="{Binding ElSystemStep}"
-                                 Style="{StaticResource DarkCompactTextBoxStyle}"/>
-                    </Grid>
-                </StackPanel>
-            </Border>
-
             <Border Style="{StaticResource PanelFrameStyle}" Margin="0,0,0,16">
                 <StackPanel>
                     <TextBlock Text="Настройки лотков" Style="{StaticResource PanelHeaderStyle}"/>
@@ -167,7 +125,7 @@
                 </StackPanel>
             </Border>
 
-            <Button Content="Применить"
+            <Button Content="Далее"
                     Style="{StaticResource RunButtonStyle}"
                     x:Name="acceptButton"
                     IsDefault="True"

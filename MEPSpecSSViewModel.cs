@@ -14,10 +14,6 @@ namespace TNovMEPSpec
         private string _conduitCoeffPipe = "1.3"; public string ConduitCoeffPipe { get => _conduitCoeffPipe; set { _conduitCoeffPipe = value; OnPropertyChanged(); } }
         private string _conduitStep = "500"; public string ConduitStep { get => _conduitStep; set { _conduitStep = value; OnPropertyChanged(); } }
 
-        private string _elSystemCoeffCable = "1.5"; public string ElSystemCoeffCable { get => _elSystemCoeffCable; set { _elSystemCoeffCable = value; OnPropertyChanged(); } }
-        private string _elSystemCoeffPipe = "1.3"; public string ElSystemCoeffPipe { get => _elSystemCoeffPipe; set { _elSystemCoeffPipe = value; OnPropertyChanged(); } }
-        private string _elSystemStep = "500"; public string ElSystemStep { get => _elSystemStep; set { _elSystemStep = value; OnPropertyChanged(); } }
-
         private string _cableTrayCoeffCable = "1.3"; public string CableTrayCoeffCable { get => _cableTrayCoeffCable; set { _cableTrayCoeffCable = value; OnPropertyChanged(); } }
 
         public event EventHandler CloseRequest; 

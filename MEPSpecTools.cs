@@ -29,6 +29,7 @@ namespace TNovMEPSpec
         static Guid NEGparamGuid = new Guid("837842da-379d-496f-9ef3-be8886a0161f");//N_ЭЛ.Группирование ЭЛ
         static Guid NSortparamGuid = new Guid("dbd21888-5efd-4e29-8722-2fe8c6d4f799");//N_Сортировка
         static Guid OSetparamGuid = new Guid("8dd021be-382d-4776-afd4-75996e351de3");//О_Комплект
+        static Guid adskAreaparamGuid = new Guid("b6a46386-70e9-4b1f-9fdb-8e1e3f18a673");//ADSK_Размер_Площадь
         
         #endregion
 
@@ -240,7 +241,7 @@ namespace TNovMEPSpec
                 return false;
             }
         }
-        public static bool Setadskpparam(ElementId elemid, in string category, in string fileName)
+        public static bool Setadskpparam(ElementId elemid, in string category, in string fileName, in bool countDuctFuttingInsulation = false)
         {
             string eid = elemid.ToString();
             Element elem = RevitAPI.Document.GetElement(elemid);
@@ -450,8 +451,36 @@ namespace TNovMEPSpec
                     countValue = countValue * 0.3048; Logger.Log($"{countValue}", 2);
                     break;
                 case "Площадь":
-                    Logger.Log("площадь", 2); Parameter paramA = elem.get_Parameter(BuiltInParameter.RBS_CURVE_SURFACE_AREA);
-                    if (paramA != null) countValue = paramA.AsDouble();
+                    Logger.Log("площадь", 2); 
+                    //новый блок - учет фитингов воздуховодов по площади
+                    if(countDuctFuttingInsulation&&elem.Category!=null&&elem.Category.Id.IntegerValue== -2008123)
+                    {
+                        InsulationLiningBase insulation = (InsulationLiningBase)elem;
+                        Element parentElem = doc.GetElement(insulation.HostElementId);
+                        if (parentElem.Category != null && parentElem.Category.Id.IntegerValue == -2008010)
+                        {
+                            Logger.Log("считаем по хосту", 2);
+
+                            //ищем у хоста параметр Площадь детали, если не нашли - ADSK_Размер_Площадь
+                            if (Param.ParamExist("Площадь детали", parentElem))
+                            {
+                                try { countValue = parentElem.LookupParameter("Площадь детали").AsDouble(); } catch { }
+                            }
+                            else countValue = Param.GetDoubleParamValue(doc, adskAreaparamGuid, parentElem);
+                        }
+                        else
+                        {
+                            Parameter paramA = elem.get_Parameter(BuiltInParameter.RBS_CURVE_SURFACE_AREA);
+                            if (paramA != null) countValue = paramA.AsDouble();
+                        }
+                    }
+                    //окончание нового блока
+                    else
+                    {
+                        Parameter paramA = elem.get_Parameter(BuiltInParameter.RBS_CURVE_SURFACE_AREA);
+                        if (paramA != null) countValue = paramA.AsDouble();
+                    }
+                    //окончание редактирования
                     countValue = countValue * 0.3048 * 0.3048; Logger.Log($"{countValue}", 2);
                     break;
                 case "Объем":
@@ -563,6 +592,314 @@ namespace TNovMEPSpec
             return true;
         }
 
+        /// <summary>
+        /// Preflight: если задан «Кабель тип N», параметры RBZ_ПучокN_* должны быть
+        /// read-only и заполнены — иначе основной код их проигнорирует.
+        /// </summary>
+        public static List<SSCablePreflightRow> BuildSSCableBundlePreflightRows(
+            IEnumerable<Element> elements,
+            Guid adskGroupGuid)
+        {
+            var raw = new List<SSCablePreflightIssue>();
+            string[] bundleSuffixes = { "Ед.измерения", "Марка", "Описание", "Производитель" };
+
+            foreach (Element elem in elements)
+            {
+                if (elem == null) continue;
+
+                var problems = new List<string>();
+                for (int n = 1; n <= 5; n++)
+                {
+                    string cableTypeParam = "Кабель тип " + n.ToString();
+                    if (!IsIdParamSet(elem, cableTypeParam)) continue;
+
+                    foreach (string suffix in bundleSuffixes)
+                    {
+                        string paramName = "RBZ_Пучок" + n.ToString() + "_" + suffix;
+                        if (!IsBundleParamReady(elem, paramName))
+                            problems.Add(paramName);
+                    }
+                }
+
+                if (problems.Count == 0) continue;
+
+                string grouping = "";
+                if (Param.ParamExistByGuid(adskGroupGuid, elem) && elem.get_Parameter(adskGroupGuid).HasValue)
+                    grouping = elem.get_Parameter(adskGroupGuid).AsString() ?? "";
+
+                string category = elem.Category != null ? elem.Category.Name : "";
+#if R2022
+                string idText = elem.Id.IntegerValue.ToString();
+#else
+                string idText = elem.Id.Value.ToString();
+#endif
+                raw.Add(new SSCablePreflightIssue
+                {
+                    ElementId = elem.Id,
+                    ElementIdText = idText,
+                    Category = category,
+                    Grouping = grouping ?? "",
+                    ProblemParams = problems.Distinct().OrderBy(p => p, StringComparer.Ordinal).ToList()
+                });
+            }
+
+            return raw
+                .GroupBy(i => new
+                {
+                    Grouping = i.Grouping ?? "",
+                    Category = i.Category ?? "",
+                    Problems = string.Join(", ", i.ProblemParams)
+                })
+                .Select(g => new SSCablePreflightRow
+                {
+                    Grouping = g.Key.Grouping,
+                    Category = g.Key.Category,
+                    ProblemParams = g.Key.Problems,
+                    Count = g.Count(),
+                    ElementIds = g.Select(x => x.ElementId).ToList(),
+                    ElementIdsText = string.Join(", ", g.Select(x => x.ElementIdText))
+                })
+                .OrderBy(r => r.Grouping, StringComparer.Ordinal)
+                .ThenBy(r => r.ProblemParams, StringComparer.Ordinal)
+                .ThenBy(r => r.Category, StringComparer.Ordinal)
+                .ToList();
+        }
+
+        static bool IsBundleParamReady(Element elem, string paramName)
+        {
+            if (!Param.ParamExist(paramName, elem)) return false;
+            Parameter prm = elem.LookupParameter(paramName);
+            if (prm == null) return false;
+            if (!prm.IsReadOnly) return false;
+            if (!prm.HasValue) return false;
+            string value = prm.AsString();
+            return !string.IsNullOrWhiteSpace(value);
+        }
+
+        public static string BuildSSCableTrayTypeKey(Element c, Guid adskGroupGuid)
+        {
+#if R2022
+            return
+                c.get_Parameter(adskGroupGuid).AsString() +
+                c.LookupParameter("Кабель тип 1").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                c.LookupParameter("Кабель тип 2").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                c.LookupParameter("Кабель тип 3").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                c.LookupParameter("Кабель тип 4").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                c.LookupParameter("Кабель тип 5").AsElementId().IntegerValue.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
+#else
+            return
+                c.get_Parameter(adskGroupGuid).AsString() +
+                c.LookupParameter("Кабель тип 1").AsElementId().Value.ToString() + c.LookupParameter("Кабель 1 Группирование").AsString() +
+                c.LookupParameter("Кабель тип 2").AsElementId().Value.ToString() + c.LookupParameter("Кабель 2 Группирование").AsString() +
+                c.LookupParameter("Кабель тип 3").AsElementId().Value.ToString() + c.LookupParameter("Кабель 3 Группирование").AsString() +
+                c.LookupParameter("Кабель тип 4").AsElementId().Value.ToString() + c.LookupParameter("Кабель 4 Группирование").AsString() +
+                c.LookupParameter("Кабель тип 5").AsElementId().Value.ToString() + c.LookupParameter("Кабель 5 Группирование").AsString();
+#endif
+        }
+
+        public static string BuildSSConduitTypeKey(Element c, Guid adskGroupGuid)
+        {
+#if R2022
+            return BuildSSCableTrayTypeKey(c, adskGroupGuid) +
+                c.LookupParameter("Труба").AsElementId().IntegerValue.ToString() +
+                c.LookupParameter("Крепеж").AsElementId().IntegerValue.ToString();
+#else
+            return BuildSSCableTrayTypeKey(c, adskGroupGuid) +
+                c.LookupParameter("Труба").AsElementId().Value.ToString() +
+                c.LookupParameter("Крепеж").AsElementId().Value.ToString();
+#endif
+        }
+
+        public static List<SSTypePreviewRow> BuildSSTypePreviewRows(
+            IEnumerable<Element> conduits,
+            IEnumerable<Element> cableTrays,
+            IList<string> conduitTypes,
+            IList<string> cableTrayTypes,
+            Guid adskGroupGuid)
+        {
+            var rows = new List<SSTypePreviewRow>();
+
+            foreach (string cType in conduitTypes ?? new List<string>())
+            {
+                var ids = new List<ElementId>();
+                Element first = null;
+                foreach (Element c in conduits)
+                {
+                    if (c == null) continue;
+                    try
+                    {
+                        if (BuildSSConduitTypeKey(c, adskGroupGuid) != cType) continue;
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    ids.Add(c.Id);
+                    if (first == null) first = c;
+                }
+                rows.Add(CreateSSTypePreviewRow("Короб", first, ids, adskGroupGuid));
+            }
+
+            foreach (string cType in cableTrayTypes ?? new List<string>())
+            {
+                var ids = new List<ElementId>();
+                Element first = null;
+                foreach (Element c in cableTrays)
+                {
+                    if (c == null) continue;
+                    try
+                    {
+                        if (BuildSSCableTrayTypeKey(c, adskGroupGuid) != cType) continue;
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                    ids.Add(c.Id);
+                    if (first == null) first = c;
+                }
+                rows.Add(CreateSSTypePreviewRow("Лоток", first, ids, adskGroupGuid));
+            }
+
+            return rows;
+        }
+
+        static SSTypePreviewRow CreateSSTypePreviewRow(
+            string category,
+            Element first,
+            List<ElementId> ids,
+            Guid adskGroupGuid)
+        {
+            string grouping = "";
+            if (first != null && Param.ParamExistByGuid(adskGroupGuid, first) && first.get_Parameter(adskGroupGuid).HasValue)
+                grouping = first.get_Parameter(adskGroupGuid).AsString() ?? "";
+
+            return new SSTypePreviewRow
+            {
+                Category = category,
+                Grouping = grouping ?? "",
+                Count = ids.Count,
+                ElementIds = ids,
+                Parameters = CollectSSTypePreviewParameters(first)
+            };
+        }
+
+        static List<SSTypeParamItem> CollectSSTypePreviewParameters(Element elem)
+        {
+            var result = new List<SSTypeParamItem>();
+            if (elem == null) return result;
+
+            Document doc = elem.Document;
+            TryAddIdParam(result, doc, elem, "Труба");
+            TryAddIdParam(result, doc, elem, "Крепеж");
+            for (int n = 1; n <= 5; n++)
+            {
+                string cableTypeName = "Кабель тип " + n.ToString();
+                if (!IsIdParamSet(elem, cableTypeName)) continue;
+                string typeValue = FormatParameterValue(doc, elem.LookupParameter(cableTypeName));
+                if (string.IsNullOrWhiteSpace(typeValue)) continue;
+
+                string grouping = "";
+                Parameter groupingParam = elem.LookupParameter("Кабель " + n.ToString() + " Группирование");
+                if (groupingParam != null && groupingParam.HasValue)
+                    grouping = groupingParam.AsString() ?? "";
+                if (string.IsNullOrWhiteSpace(grouping))
+                    grouping = FormatParameterValue(doc, groupingParam);
+
+                string value = string.IsNullOrWhiteSpace(grouping)
+                    ? typeValue
+                    : typeValue + " - " + grouping;
+                result.Add(new SSTypeParamItem { Name = cableTypeName, Value = value });
+            }
+            return result;
+        }
+
+        static void TryAddIdParam(List<SSTypeParamItem> result, Document doc, Element elem, string paramName)
+        {
+            if (!IsIdParamSet(elem, paramName)) return;
+            string value = FormatParameterValue(doc, elem.LookupParameter(paramName));
+            if (string.IsNullOrWhiteSpace(value)) return;
+            result.Add(new SSTypeParamItem { Name = paramName, Value = value });
+        }
+
+        static string FormatParameterValue(Document doc, Parameter p)
+        {
+            if (p == null || !p.HasValue) return "";
+            try
+            {
+                string vs = p.AsValueString();
+                if (!string.IsNullOrWhiteSpace(vs)) return vs;
+
+                switch (p.StorageType)
+                {
+                    case StorageType.String:
+                        return p.AsString() ?? "";
+                    case StorageType.Integer:
+                        return p.AsInteger().ToString();
+                    case StorageType.Double:
+                        return p.AsDouble().ToString(CultureInfo.InvariantCulture);
+                    case StorageType.ElementId:
+                        ElementId id = p.AsElementId();
+                        if (id == null) return "";
+#if R2022
+                        if (id.IntegerValue == -1) return "";
+#else
+                        if (id.Value == -1) return "";
+#endif
+                        Element e = doc != null ? doc.GetElement(id) : null;
+                        if (e == null) return "";
+                        ElementType et = e as ElementType;
+                        if (et != null)
+                        {
+                            if (!string.IsNullOrWhiteSpace(et.FamilyName))
+                                return et.FamilyName + " : " + et.Name;
+                            return et.Name ?? "";
+                        }
+                        return e.Name ?? "";
+                    default:
+                        return "";
+                }
+            }
+            catch
+            {
+                return "";
+            }
+        }
+
+    }
+
+    public class SSCablePreflightIssue
+    {
+        public ElementId ElementId;
+        public string ElementIdText;
+        public string Category;
+        public string Grouping;
+        public List<string> ProblemParams;
+    }
+
+    public class SSCablePreflightRow
+    {
+        public string Grouping { get; set; }
+        public string Category { get; set; }
+        public string ProblemParams { get; set; }
+        public int Count { get; set; }
+        public string ElementIdsText { get; set; }
+        public List<ElementId> ElementIds { get; set; }
+    }
+
+    public class SSTypeParamItem
+    {
+        public string Name { get; set; }
+        public string Value { get; set; }
+    }
+
+    public class SSTypePreviewRow
+    {
+        public string Category { get; set; }
+        public string Grouping { get; set; }
+        public int Count { get; set; }
+        public List<ElementId> ElementIds { get; set; }
+        public List<SSTypeParamItem> Parameters { get; set; }
     }
     public class ConduitCube
     {
