@@ -149,7 +149,7 @@ namespace TNovMEPSpec
             #region Выбор сценария
             //СЦЕНАРИЙ ВК ОВ / СС ПС / ЭЛ
             bool ss = false; bool el = false; bool vkov = false;
-            if (docName.Contains("-СС") || docName.Contains("_СС") || docName.Contains("Шаблон СС")) ss = true;
+            if (docName.Contains("-СС") || docName.Contains("_СС") || docName.Contains("-ПС") || docName.Contains("_ПС") || docName.Contains("Шаблон СС")) ss = true;
             if (docName.Contains("-ЭЛ") || docName.Contains("_ЭЛ") 
                 || docName.Contains("-ЭО") || docName.Contains("_ЭО")
                 || docName.Contains("-ЭС") || docName.Contains("_ЭС")
