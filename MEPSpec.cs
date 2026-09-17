@@ -245,7 +245,7 @@ namespace TNovMEPSpec
                 List<Element> preflightElems = new List<Element>();
                 foreach (var c in Conduit) preflightElems.Add(c);
                 foreach (var c in CableTrays) preflightElems.Add(c);
-                List<SSCablePreflightRow> preflightRows =
+                List<MEPSpecIssueRow> preflightRows =
                     MEPSpecTools.BuildSSCableBundlePreflightRows(preflightElems, adskGparamGuid);
                 if (preflightRows.Count > 0)
                 {
@@ -1511,12 +1511,6 @@ namespace TNovMEPSpec
 
                 if (failscount > 0)
                 {
-                    List<string> failed = failed1
-    .Union(failed2, StringComparer.OrdinalIgnoreCase)
-    .Union(failed3, StringComparer.OrdinalIgnoreCase)
-    .Union(failed4, StringComparer.OrdinalIgnoreCase)
-    .ToList();
-
                     string messageF = "";
                     string failed1str = "Не заполнился параметр ADSK_Группирование: ";
                     if (failed1.Count > 0) { failed1str = failed1str + String.Join(",", failed1); messageF = messageF + failed1str + ". "; }
@@ -1528,10 +1522,30 @@ namespace TNovMEPSpec
                     if (failed4.Count > 0) { failed4str = failed4str + String.Join(",", failed4); messageF = messageF + failed4str + ". "; }
 
                     Logger.Log(messageF, 1);
+                }
 
-                    // Диалоговое окно
-                    ElementsTreeWindow window = new ElementsTreeWindow(uiApp, String.Join(",", failed), DBCommandName, dateTime, TNovVersion);
-                    window.Show();
+                Logger.Log("Постпроверка ADSK", 1);
+                try
+                {
+                    List<Element> postcheckElems = MEPSpecTools.CollectVKOVPostcheckElements(doc);
+                    List<MEPSpecIssueRow> postcheckRows = MEPSpecTools.BuildVKOVPostcheckRows(postcheckElems);
+                    if (postcheckRows.Count > 0)
+                    {
+                        int problemCount = postcheckRows.Sum(r => r.Count);
+                        Logger.Log("Постпроверка: найдено проблемных элементов: " + problemCount.ToString() +
+                                   " (групп: " + postcheckRows.Count.ToString() + ")", 3);
+                        string header = $"Найдено проблемных элементов: {problemCount} (групп: {postcheckRows.Count}). " +
+                                        "Проверьте ADSK_Количество и ADSK_Группирование.";
+                        MEPSpecSSPreflightHost.Show(uiApp, postcheckRows, "ПОСТПРОВЕРКА ADSK", header);
+                    }
+                    else
+                    {
+                        Logger.Log("Постпроверка: проблем не найдено", 1);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Log("Постпроверка: ошибка: " + ex.Message, 4);
                 }
             }
 #endregion
