@@ -198,7 +198,7 @@ namespace TNovMEPSpec
                     string classGerm = "?"; double thickness = 0; string connectedElems = "";
                     string cat = "Воздуховоды";
 
-                    Logger.Log("   " + elem.Id.IntegerValue.ToString(), 2);
+                    Logger.Log("   " + elem.Id.IntValue().ToString(), 2);
 
                     if (IsDuctConnector(elem)) 
                     {
@@ -380,9 +380,9 @@ namespace TNovMEPSpec
             {
                 // Проверяем категорию и наличие коннекторов
                 if (familyInstance.Category != null &&
-                    (familyInstance.Category.Id.IntegerValue == (int)BuiltInCategory.OST_DuctFitting ||
-                     familyInstance.Category.Id.IntegerValue == (int)BuiltInCategory.OST_DuctAccessory ||
-                     familyInstance.Category.Id.IntegerValue == (int)BuiltInCategory.OST_DuctTerminal))
+                    (familyInstance.Category.Id.IntValue() == (int)BuiltInCategory.OST_DuctFitting ||
+                     familyInstance.Category.Id.IntValue() == (int)BuiltInCategory.OST_DuctAccessory ||
+                     familyInstance.Category.Id.IntValue() == (int)BuiltInCategory.OST_DuctTerminal))
                 {
                     return true;
                 }
@@ -418,7 +418,7 @@ namespace TNovMEPSpec
             // Если есть прямое подключение к воздуховодам
             if (hasDirectDuctConnection)
             {
-                connectedElems = string.Join(",", connectedDuctIds.Select(id => id.IntegerValue));
+                connectedElems = string.Join(",", connectedDuctIds.Select(id => id.IntValue()));
                 return;
             }
 
@@ -470,7 +470,7 @@ namespace TNovMEPSpec
             // Если нашли воздуховоды через подключенные элементы
             if (connectedDuctIds.Count > 0)
             {
-                connectedElems = string.Join(",", connectedDuctIds.Select(id => id.IntegerValue));
+                connectedElems = string.Join(",", connectedDuctIds.Select(id => id.IntValue()));
             }
         }
 

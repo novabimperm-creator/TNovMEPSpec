@@ -539,7 +539,7 @@
                                         <TextBlock Text="Обрабатывать каталоги"
                                                    Style="{StaticResource CardTitleStyle}"/>
                                         <TextBlock Style="{StaticResource CardSubtitleStyle}">
-                                            <Hyperlink NavigateUri="https://portal.talan.group/knowledge/proektirovanie/MEPspec/"
+                                            <Hyperlink NavigateUri="https://tnov.pm-nova.ru/wiki/#MEPcatalogs"
                                                        RequestNavigate="Hyperlink_RequestNavigate"
                                                        Style="{StaticResource MutedHyperlinkStyle}">
                                                 справка
@@ -555,7 +555,7 @@
                                         <TextBlock Text="Построить немоделируемые элементы"
                                                    Style="{StaticResource CardTitleStyle}"/>
                                         <TextBlock Style="{StaticResource CardSubtitleStyle}">
-                                            <Hyperlink NavigateUri="https://portal.talan.group/knowledge/proektirovanie/MEPspec/"
+                                            <Hyperlink NavigateUri="https://tnov.pm-nova.ru/wiki/#MEPcatalogs"
                                                        RequestNavigate="Hyperlink_RequestNavigate"
                                                        Style="{StaticResource MutedHyperlinkStyle}">
                                                 справка

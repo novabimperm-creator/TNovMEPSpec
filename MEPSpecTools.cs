@@ -310,7 +310,7 @@ namespace TNovMEPSpec
                         {
                             InsulationLiningBase insulation = (InsulationLiningBase)elem;
                             Element parentElem = doc.GetElement(insulation.HostElementId);
-                            if (parentElem != null && parentElem.GetTypeId().IntegerValue > 0)
+                            if (parentElem != null && parentElem.GetTypeId().IntValue() > 0)
                             {
                                 Element parentElemType = doc.GetElement(parentElem.GetTypeId());
                                 string pipeTypeMrkT = Param.GetStringParamValue(doc, BuiltInParameter.WINDOW_TYPE_ID, parentElemType);
@@ -357,7 +357,7 @@ namespace TNovMEPSpec
                         {
                             InsulationLiningBase insulation = (InsulationLiningBase)elem;
                             Element parentElem = doc.GetElement(insulation.HostElementId);
-                            if (parentElem != null && parentElem.GetTypeId().IntegerValue > 0)
+                            if (parentElem != null && parentElem.GetTypeId().IntValue() > 0)
                             {
                                 Element parentElemType = doc.GetElement(parentElem.GetTypeId());
                                 string pipeTypeMrkT = Param.GetStringParamValue(doc, BuiltInParameter.WINDOW_TYPE_ID, parentElemType);
@@ -404,7 +404,7 @@ namespace TNovMEPSpec
                         {
                             InsulationLiningBase insulation = (InsulationLiningBase)elem;
                             Element parentElem = doc.GetElement(insulation.HostElementId);
-                            if (parentElem != null && parentElem.GetTypeId().IntegerValue > 0)
+                            if (parentElem != null && parentElem.GetTypeId().IntValue() > 0)
                             {
                                 Element parentElemType = doc.GetElement(parentElem.GetTypeId());
                                 string pipeTypeMrkT = Param.GetStringParamValue(doc, BuiltInParameter.WINDOW_TYPE_ID, parentElemType);
@@ -453,11 +453,11 @@ namespace TNovMEPSpec
                 case "Площадь":
                     Logger.Log("площадь", 2); 
                     //новый блок - учет фитингов воздуховодов по площади
-                    if(countDuctFuttingInsulation&&elem.Category!=null&&elem.Category.Id.IntegerValue== -2008123)
+                    if(countDuctFuttingInsulation&&elem.Category!=null&&elem.Category.Id.IntValue()== -2008123)
                     {
                         InsulationLiningBase insulation = (InsulationLiningBase)elem;
                         Element parentElem = doc.GetElement(insulation.HostElementId);
-                        if (parentElem.Category != null && parentElem.Category.Id.IntegerValue == -2008010)
+                        if (parentElem.Category != null && parentElem.Category.Id.IntValue() == -2008010)
                         {
                             Logger.Log("считаем по хосту", 2);
 

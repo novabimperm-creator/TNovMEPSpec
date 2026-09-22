@@ -510,7 +510,6 @@ namespace TNovMEPSpec
 
                                         string naim = firstElem.AdskNaim;
                                         string mrk = firstElem.Mark;
-                                        if (mrk.Contains("ВВГ")) naim = naim.Replace(".", ",");
 
                                         elCubes.Add(new ElNonModelCube
                                         {
