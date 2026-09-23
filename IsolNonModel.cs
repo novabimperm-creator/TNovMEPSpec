@@ -86,7 +86,7 @@ namespace TNovMEPSpec
                     Logger.Log("Открываем книгу Excel", 1);
                     //книга
                     workbooks = xlApp.Workbooks;
-                    wb = workbooks.Open("//fs-nova/NOVA/04_БИБЛИОТЕКА/BIM/ВК_ОВ_Семейства/_TNov/Немоделируемые.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
+                    wb = workbooks.Open(TNovPaths.MepTables + @"\Немоделируемые.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
                     Worksheet ws1; ws1 = (Worksheet)wb.Sheets[1]; //изоляция возд
                     Worksheet ws2; ws2 = (Worksheet)wb.Sheets[2]; //изоляция труб
 

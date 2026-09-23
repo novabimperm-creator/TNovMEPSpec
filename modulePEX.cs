@@ -26,7 +26,7 @@ namespace TNovMEPSpec
             {
                 xlApp = new Microsoft.Office.Interop.Excel.Application();
                 workbooks = xlApp.Workbooks;
-                wb = workbooks.Open("//fs-nova/NOVA/04_БИБЛИОТЕКА/BIM/ВК_ОВ_Семейства/_TNov/VM_PEX_Спецификация труб.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
+                wb = workbooks.Open(TNovPaths.MepTables + @"\VM_PEX_Спецификация труб.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
                 PEXPipeDiams = new List<string>();
                 PEXPipeMass = new List<string>();
                 PEXPipeArts = new List<string>();
@@ -93,7 +93,7 @@ namespace TNovMEPSpec
             {
                 xlApp = new Microsoft.Office.Interop.Excel.Application();
                 workbooks = xlApp.Workbooks;
-                wb = workbooks.Open("//fs-nova/NOVA/04_БИБЛИОТЕКА/BIM/ВК_ОВ_Семейства/_TNov/VM_PEX_Спецификация труб.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
+                wb = workbooks.Open(TNovPaths.MepTables + @"\VM_PEX_Спецификация труб.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
                 PEXFitCodes = new List<string>();
                 PEXFitArt1 = new List<string>();
                 PEXFitArt2 = new List<string>();

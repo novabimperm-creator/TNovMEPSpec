@@ -991,7 +991,7 @@ namespace TNovMEPSpec
                             Logger.Log("MS Excel не установлен на данном компьютере.", 4);
                         }
                         workbooks = xlApp.Workbooks;
-                        wb0 = workbooks.Open("//fs-nova/NOVA/04_БИБЛИОТЕКА/BIM/ВК_ОВ_Семейства/_TNov/VM_PEX_Спецификация труб.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
+                        wb0 = workbooks.Open(TNovPaths.MepTables + @"\VM_PEX_Спецификация труб.xlsx", 0, true, 5, "", "", false, Microsoft.Office.Interop.Excel.XlPlatform.xlWindows, "", true, false, 0, true, false, false);
                     }
                     catch (Exception e)
                     {
