@@ -1526,7 +1526,7 @@ namespace TNovMEPSpec
                 Logger.Log("Постпроверка ADSK", 1);
                 try
                 {
-                    List<Element> postcheckElems = MEPSpecTools.CollectVKOVPostcheckElements(doc);
+                    List<Element> postcheckElems = VkovPostcheck.Collect(doc);
                     List<MEPSpecIssueRow> postcheckRows = MEPSpecTools.BuildVKOVPostcheckRows(postcheckElems);
                     if (postcheckRows.Count > 0)
                     {

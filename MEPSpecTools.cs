@@ -592,94 +592,18 @@ namespace TNovMEPSpec
             return true;
         }
 
-        static readonly BuiltInCategory[] VkovPostcheckCategories =
-        {
-            BuiltInCategory.OST_DuctAccessory,
-            BuiltInCategory.OST_DuctTerminal,
-            BuiltInCategory.OST_FlexDuctCurves,
-            BuiltInCategory.OST_DuctLinings,
-            BuiltInCategory.OST_DuctCurves,
-            BuiltInCategory.OST_DuctInsulations,
-            BuiltInCategory.OST_DuctFitting,
-            BuiltInCategory.OST_MechanicalEquipment,
-            BuiltInCategory.OST_PipeAccessory,
-            BuiltInCategory.OST_FlexPipeCurves,
-            BuiltInCategory.OST_PipeCurves,
-            BuiltInCategory.OST_PipeInsulations,
-            BuiltInCategory.OST_PipeFitting,
-            BuiltInCategory.OST_PlumbingFixtures
-        };
-
-        static readonly HashSet<BuiltInCategory> VkovLengthCategories = new HashSet<BuiltInCategory>
-        {
-            BuiltInCategory.OST_PipeCurves,
-            BuiltInCategory.OST_DuctCurves,
-            BuiltInCategory.OST_FlexPipeCurves,
-            BuiltInCategory.OST_FlexDuctCurves,
-            BuiltInCategory.OST_PipeInsulations,
-            BuiltInCategory.OST_DuctInsulations
-        };
-
-        const string VkovSkipNaimValue = "!Не учитывать";
-        const double VkovLengthLimitMm = 500;
-
-        public static List<Element> CollectVKOVPostcheckElements(Document doc)
-        {
-            var result = new List<Element>();
-            if (doc == null) return result;
-            foreach (BuiltInCategory cat in VkovPostcheckCategories)
-            {
-                result.AddRange(new FilteredElementCollector(doc)
-                    .OfCategory(cat)
-                    .WhereElementIsNotElementType()
-                    .ToElements());
-            }
-            return result;
-        }
-
         public static List<MEPSpecIssueRow> BuildVKOVPostcheckRows(IEnumerable<Element> elements)
         {
-            var raw = new List<SSCablePreflightIssue>();
-            foreach (Element elem in elements ?? Enumerable.Empty<Element>())
-            {
-                if (elem == null) continue;
-
-                string naim = GetGuidStringInstanceOrType(elem, adskNparamGuid);
-                if (naim != null && naim.Trim() == VkovSkipNaimValue)
-                    continue;
-
-                var problems = new List<string>();
-
-                // Изоляция с нерассчитанной «Длиной»: ADSK_Количество = 0 / не назначено — не ошибка
-                if (!IsInsulationWithUncalculatedLength(elem))
+            var raw = VkovPostcheck.FindIssues(elements)
+                .Select(i => new SSCablePreflightIssue
                 {
-                    Parameter qtyParam = GetAssignedParamInstanceOrType(elem, adskCparamGuid);
-                    if (qtyParam == null)
-                        problems.Add("Количество не назначено");
-                    else if (IsNumericZero(qtyParam))
-                    {
-                        if (IsLengthCategory(elem) && TryGetLengthMm(elem, out double lengthMm) && lengthMm > VkovLengthLimitMm)
-                            problems.Add("Количество = 0 при длине > 500 мм");
-                    }
-                }
-
-                Parameter groupParam = GetAssignedParamInstanceOrType(elem, adskGparamGuid);
-                string grouping = GetParameterString(groupParam);
-                if (groupParam == null || string.IsNullOrWhiteSpace(grouping))
-                    problems.Add("Группирование не заполнено");
-
-                if (problems.Count == 0) continue;
-
-                string category = elem.Category != null ? elem.Category.Name : "";
-                raw.Add(new SSCablePreflightIssue
-                {
-                    ElementId = elem.Id,
-                    ElementIdText = GetElementIdText(elem.Id),
-                    Category = category,
-                    Grouping = grouping ?? "",
-                    ProblemParams = problems
-                });
-            }
+                    ElementId = i.ElementId,
+                    ElementIdText = GetElementIdText(i.ElementId),
+                    Category = i.Category,
+                    Grouping = i.Grouping,
+                    ProblemParams = i.Problems
+                })
+                .ToList();
 
             return GroupIssueRows(raw);
         }
@@ -755,119 +679,6 @@ namespace TNovMEPSpec
                 .ThenBy(r => r.ProblemParams, StringComparer.Ordinal)
                 .ThenBy(r => r.Category, StringComparer.Ordinal)
                 .ToList();
-        }
-
-        static Parameter GetAssignedParamInstanceOrType(Element elem, Guid guid)
-        {
-            if (elem == null) return null;
-            Parameter instance = null;
-            if (Param.ParamExistByGuid(guid, elem))
-                instance = elem.get_Parameter(guid);
-            if (instance != null && instance.HasValue)
-                return instance;
-
-            ElementId typeId = elem.GetTypeId();
-            if (typeId != null)
-            {
-                Element type = elem.Document.GetElement(typeId);
-                if (type != null && Param.ParamExistByGuid(guid, type))
-                {
-                    Parameter typeParam = type.get_Parameter(guid);
-                    if (typeParam != null && typeParam.HasValue)
-                        return typeParam;
-                }
-            }
-
-            return null;
-        }
-
-        static string GetGuidStringInstanceOrType(Element elem, Guid guid)
-        {
-            if (elem == null) return null;
-            Parameter instance = null;
-            if (Param.ParamExistByGuid(guid, elem))
-                instance = elem.get_Parameter(guid);
-            string instanceVal = GetParameterString(instance);
-            if (!string.IsNullOrWhiteSpace(instanceVal))
-                return instanceVal;
-
-            ElementId typeId = elem.GetTypeId();
-            if (typeId == null) return instanceVal;
-            Element type = elem.Document.GetElement(typeId);
-            if (type == null || !Param.ParamExistByGuid(guid, type))
-                return instanceVal;
-            string typeVal = GetParameterString(type.get_Parameter(guid));
-            return !string.IsNullOrWhiteSpace(typeVal) ? typeVal : instanceVal;
-        }
-
-        static string GetParameterString(Parameter p)
-        {
-            if (p == null || !p.HasValue) return null;
-            string value = p.AsString();
-            if (value == null) value = p.AsValueString();
-            return value;
-        }
-
-        static bool IsNumericZero(Parameter p)
-        {
-            if (p == null || !p.HasValue) return false;
-            if (p.StorageType == StorageType.Double)
-                return Math.Abs(p.AsDouble()) < 0.0000001;
-            if (p.StorageType == StorageType.Integer)
-                return p.AsInteger() == 0;
-            return false;
-        }
-
-        static bool IsLengthCategory(Element elem)
-        {
-            if (elem?.Category == null) return false;
-#if R2022
-            int catId = elem.Category.Id.IntegerValue;
-#else
-            int catId = (int)elem.Category.Id.Value;
-#endif
-            return VkovLengthCategories.Contains((BuiltInCategory)catId);
-        }
-
-        static bool IsInsulationWithUncalculatedLength(Element elem)
-        {
-            if (!(elem is InsulationLiningBase)) return false;
-            Parameter dlina = elem.LookupParameter("Длина");
-            return dlina != null && !dlina.HasValue;
-        }
-
-        static bool TryGetLengthMm(Element elem, out double lengthMm)
-        {
-            lengthMm = 0;
-            if (elem == null) return false;
-
-            if (elem is InsulationLiningBase)
-            {
-                Parameter isolLength = elem.LookupParameter("Длина");
-                if (isolLength != null && !isolLength.HasValue)
-                    return false;
-                if (isolLength != null && isolLength.HasValue && isolLength.StorageType == StorageType.Double)
-                {
-                    lengthMm = isolLength.AsDouble() * 304.8;
-                    return true;
-                }
-            }
-
-            Parameter curveLength = elem.get_Parameter(BuiltInParameter.CURVE_ELEM_LENGTH);
-            if (curveLength != null && curveLength.HasValue)
-            {
-                lengthMm = curveLength.AsDouble() * 304.8;
-                return true;
-            }
-
-            Parameter dlina = elem.LookupParameter("Длина");
-            if (dlina != null && dlina.HasValue && dlina.StorageType == StorageType.Double)
-            {
-                lengthMm = dlina.AsDouble() * 304.8;
-                return true;
-            }
-
-            return false;
         }
 
         static string GetElementIdText(ElementId id)
