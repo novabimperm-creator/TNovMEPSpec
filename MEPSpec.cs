@@ -947,8 +947,22 @@ namespace TNovMEPSpec
 #else
                         ElementId hostId = new ElementId((long)hostIdValue);
 #endif
-                        IEnumerable<ElementId> hosted = InsulationLiningBase.GetInsulationIds(doc, hostId)
-                            .Concat(InsulationLiningBase.GetLiningIds(doc, hostId));
+                        Element host = doc.GetElement(hostId);
+                        if (host?.Category == null) continue;
+                        BuiltInCategory hostCat = (BuiltInCategory)host.Category.Id.IntValue();
+                        bool ductHost = hostCat == BuiltInCategory.OST_DuctCurves || hostCat == BuiltInCategory.OST_DuctFitting || hostCat == BuiltInCategory.OST_DuctAccessory;
+                        bool pipeHost = hostCat == BuiltInCategory.OST_PipeCurves || hostCat == BuiltInCategory.OST_PipeFitting || hostCat == BuiltInCategory.OST_PipeAccessory;
+                        if (!ductHost && !pipeHost) continue;
+                        List<ElementId> hosted = new List<ElementId>();
+                        //GetLiningIds бросает ArgumentException для не-воздуховодных элементов
+                        try { hosted.AddRange(InsulationLiningBase.GetInsulationIds(doc, hostId)); }
+                        catch (Autodesk.Revit.Exceptions.ArgumentException ex) { Logger.Log($"   {hostId} изоляция: {ex.Message}", 4); }
+                        if (ductHost)
+                        {
+                            try { hosted.AddRange(InsulationLiningBase.GetLiningIds(doc, hostId)); }
+                            catch (Autodesk.Revit.Exceptions.ArgumentException ex) { Logger.Log($"   {hostId} внутр. изоляция: {ex.Message}", 4); }
+                        }
+                        Logger.Log($"   {hostId} ({host.Category.Name}): найдено изоляции {hosted.Count}", 1);
                         foreach (ElementId id in hosted)
                         {
 #if R2022
@@ -958,7 +972,7 @@ namespace TNovMEPSpec
 #endif
                         }
                     }
-                    Logger.Log("Добавлено изоляции выбранных элементов: " + (selectedIds.Count - selectedBefore).ToString(), 1);
+                    Logger.Log("Выбрано элементов: " + selectedBefore.ToString() + ", добавлено изоляции: " + (selectedIds.Count - selectedBefore).ToString(), 1);
 #if R2022
                     ArmVozd = ArmVozd.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
                     Vozdrasp = Vozdrasp.Where(e => selectedIds.Contains(e.Id.IntegerValue)).ToList();
@@ -1117,21 +1131,6 @@ namespace TNovMEPSpec
                                 }
                             }
 
-                            //каталоги PEX для фитингов труб
-                            if (runcatalogs && FitTrub.Count > 0 && viewModel.run13)
-                            {
-                                List<ElementId> TrubIds = new List<ElementId>(); foreach (Element t in Trub) TrubIds.Add(t.Id);
-                                bool PEXmarkCheck = modulePEX.PEXpipesTypeMarkCheck(TrubIds);
-                                modulePEX mPEX = new modulePEX();
-                                mPEX.PEXfitsReadExcel(out List<string> PEXFitCodes, out List<string> PEXFitArt1, out List<string> PEXFitArt2, out List<string> PEXFitArt3);
-                                foreach (Element a in FitTrub)
-                                {
-                                    bool success4 = true;
-                                    if (PEXmarkCheck) mPEX.PEXFitsSetParams(dateTime, DBCommandName, a.Id, PEXFitCodes, PEXFitArt1, PEXFitArt2, PEXFitArt3, out success4);
-                                    if (success4 == false) { failed4.Add(a.Id); failscount++; continue; }
-                                }
-                            }
-
                             //проход 2: ADSK_Наименование и ADSK_Количество.
                             //Длина/размер у изоляции пересчитываются только при регенерации после изменения самой изоляции:
                             //без Regenerate значения читались устаревшими и изоляция заполнялась верно только со второго запуска.
@@ -1154,6 +1153,31 @@ namespace TNovMEPSpec
                                     }
                                 }
                             }
+
+                            //каталоги PEX для фитингов труб - после прохода 2: берут ADSK_Наименование/Код изделия у присоединенных труб
+                            if (runcatalogs && FitTrub.Count > 0 && viewModel.run13)
+                            {
+                                List<ElementId> TrubIds = new List<ElementId>(); foreach (Element t in Trub) TrubIds.Add(t.Id);
+                                bool PEXmarkCheck = modulePEX.PEXpipesTypeMarkCheck(TrubIds);
+                                modulePEX mPEX = new modulePEX();
+                                mPEX.PEXfitsReadExcel(out List<string> PEXFitCodes, out List<string> PEXFitArt1, out List<string> PEXFitArt2, out List<string> PEXFitArt3);
+                                foreach (Element a in FitTrub)
+                                {
+                                    bool success4 = true;
+                                    try
+                                    {
+                                        if (PEXmarkCheck) mPEX.PEXFitsSetParams(dateTime, DBCommandName, a.Id, PEXFitCodes, PEXFitArt1, PEXFitArt2, PEXFitArt3, out success4);
+                                    }
+                                    catch (Exception ex)
+                                    {
+                                        //один фитинг не должен откатывать всю транзакцию
+                                        success4 = false;
+                                        Logger.Log($"      {a.Id} Ошибка PEX: {ex.Message}", 4);
+                                    }
+                                    if (success4 == false) { failed4.Add(a.Id); failscount++; continue; }
+                                }
+                            }
+
 
 
 

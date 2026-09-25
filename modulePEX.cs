@@ -322,7 +322,7 @@ namespace TNovMEPSpec
                                         if(pipe.Category.Id== pipeCatId)
                                         {
                                             Element pipeType = doc.GetElement(pipe.GetTypeId());
-                                            string pipeNaim = pipe.LookupParameter("ADSK_Наименование").AsString(); pipeNaim = pipeNaim.Replace(",", ".");
+                                            string pipeNaim = pipe.LookupParameter("ADSK_Наименование")?.AsString() ?? ""; pipeNaim = pipeNaim.Replace(",", ".");
                                             string pipeCode = pipe.LookupParameter("ADSK_Код изделия").AsString(); if (pipeCode == null) pipeCode = "";
                                             double pipeMass = pipe.LookupParameter("ADSK_Масса").AsDouble();
                                             string pipeManuf = pipe.LookupParameter("ADSK_Завод-изготовитель").AsString(); if (pipeManuf == null) pipeManuf = "";
