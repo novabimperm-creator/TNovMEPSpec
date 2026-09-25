@@ -492,14 +492,12 @@ namespace TNovMEPSpec
                     Logger.Log("viewModel2.countPar не распознан", 2);break;
             }
             double coeff = 1;
-            string vmk = viewModel2.countK; // без замены
-            if (double.TryParse(vmk, NumberStyles.Any, CultureInfo.InvariantCulture, out coeff))
+            //запятая - десятичный разделитель: с NumberStyles.Any "1,1" читалось как 11
+            string vmk = (viewModel2.countK ?? "").Trim().Replace(',', '.');
+            if (!double.TryParse(vmk, NumberStyles.Float, CultureInfo.InvariantCulture, out coeff))
             {
-                // парсинг успешен
-            }
-            else
-            {
-                Logger.Log($"Не удалось распарсить коэффициент: {vmk}", 2);
+                coeff = 1;
+                Logger.Log($"      {eid} Ошибка: не удалось распознать коэффициент «{viewModel2.countK}», принят 1", 4);
             }
             countValue = countValue * coeff;
             countValue = Math.Round(countValue, 1); Logger.Log($"итоговое колво {countValue.ToString(CultureInfo.InvariantCulture)}", 2);
@@ -592,20 +590,62 @@ namespace TNovMEPSpec
             return true;
         }
 
-        public static List<MEPSpecIssueRow> BuildVKOVPostcheckRows(IEnumerable<Element> elements)
+        public static void AddFillErrors(Dictionary<ElementId, List<string>> fillErrors, IEnumerable<ElementId> ids, string problem)
         {
-            var raw = VkovPostcheck.FindIssues(elements)
-                .Select(i => new SSCablePreflightIssue
+            foreach (ElementId id in ids)
+            {
+                if (!fillErrors.TryGetValue(id, out List<string> problems))
+                {
+                    problems = new List<string>();
+                    fillErrors[id] = problems;
+                }
+                if (!problems.Contains(problem)) problems.Add(problem);
+            }
+        }
+
+        /// <summary>
+        /// Постпроверка по отработанным элементам + ошибки записи параметров (fillErrors) в одном списке.
+        /// </summary>
+        public static List<MEPSpecIssueRow> BuildVKOVPostcheckRows(IList<Element> elements, IDictionary<ElementId, List<string>> fillErrors)
+        {
+            var byId = new Dictionary<ElementId, SSCablePreflightIssue>();
+            foreach (VkovPostcheckIssue i in VkovPostcheck.FindIssues(elements))
+            {
+                byId[i.ElementId] = new SSCablePreflightIssue
                 {
                     ElementId = i.ElementId,
                     ElementIdText = GetElementIdText(i.ElementId),
                     Category = i.Category,
                     Grouping = i.Grouping,
-                    ProblemParams = i.Problems
-                })
-                .ToList();
+                    ProblemParams = new List<string>(i.Problems)
+                };
+            }
 
-            return GroupIssueRows(raw);
+            if (fillErrors != null && fillErrors.Count > 0)
+            {
+                foreach (Element elem in elements)
+                {
+                    if (elem == null || !fillErrors.TryGetValue(elem.Id, out List<string> errors)) continue;
+                    if (!byId.TryGetValue(elem.Id, out SSCablePreflightIssue issue))
+                    {
+                        string grouping = "";
+                        if (Param.ParamExistByGuid(adskGparamGuid, elem) && elem.get_Parameter(adskGparamGuid).HasValue)
+                            grouping = elem.get_Parameter(adskGparamGuid).AsString() ?? "";
+                        issue = new SSCablePreflightIssue
+                        {
+                            ElementId = elem.Id,
+                            ElementIdText = GetElementIdText(elem.Id),
+                            Category = elem.Category != null ? elem.Category.Name : "",
+                            Grouping = grouping,
+                            ProblemParams = new List<string>()
+                        };
+                        byId[elem.Id] = issue;
+                    }
+                    issue.ProblemParams.AddRange(errors.Where(e => !issue.ProblemParams.Contains(e)));
+                }
+            }
+
+            return GroupIssueRows(byId.Values.ToList());
         }
 
         /// <summary>
