@@ -15,7 +15,10 @@
         MinWidth="720"
         MinHeight="360"
         ShowInTaskbar="True"
-        WindowStyle="None">
+        WindowStyle="None"
+        SourceInitialized="Window_SourceInitialized"
+        MouseEnter="Window_MouseEnter"
+        MouseLeave="Window_MouseLeave">
 
     <Window.Resources>
         <ResourceDictionary>
@@ -74,7 +77,7 @@
             Background="{StaticResource BgBrush}"
             BorderBrush="{StaticResource AccentBrush}"
             BorderThickness="1">
-        <Grid Margin="18">
+        <Grid x:Name="RootGrid" Margin="18">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
@@ -89,8 +92,8 @@
                     Margin="0,0,0,10">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="35"/>
+                        <ColumnDefinition x:Name="TitleColumn" Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
                     <TextBlock Text="{Binding TitleText}"
                                Grid.Column="0"
@@ -98,11 +101,30 @@
                                FontSize="20"
                                FontWeight="Bold"
                                VerticalAlignment="Center"/>
-                    <Button Content="✕"
-                            Grid.Column="1"
-                            Style="{StaticResource CloseButtonStyleMini}"
-                            Command="{Binding CloseCommand}"
-                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                        <Button x:Name="MinimizeButton"
+                                Content="–"
+                                Width="35"
+                                Style="{StaticResource CloseButtonStyleMini}"
+                                Margin="0,0,6,0"
+                                Click="Minimize_Click"
+                                ToolTip="Свернуть"
+                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <Button x:Name="CollapseButton"
+                                Content="^"
+                                Width="35"
+                                Style="{StaticResource CloseButtonStyleMini}"
+                                Margin="0,0,6,0"
+                                Click="CollapseButton_Click"
+                                ToolTip="Свернуть в полоску"
+                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                        <Button x:Name="CloseButton"
+                                Content="✕"
+                                Width="35"
+                                Style="{StaticResource CloseButtonStyleMini}"
+                                Command="{Binding CloseCommand}"
+                                WindowChrome.IsHitTestVisibleInChrome="True"/>
+                    </StackPanel>
                 </Grid>
             </Border>
 
