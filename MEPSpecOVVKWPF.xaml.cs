@@ -111,6 +111,13 @@ namespace TNovMEPSpec
         {
             this.Close(); // закрытие окна
         }
+        //«Что обрабатывается?» у каталогов и немоделируемых: текст в Tag ссылки
+        private void WhatIsProcessed_Click(object sender, RoutedEventArgs e)
+        {
+            new InfoWindow280((sender as System.Windows.Documents.Hyperlink)?.Tag as string ?? "") { Owner = this }.ShowDialog();
+            e.Handled = true;
+        }
+
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
 

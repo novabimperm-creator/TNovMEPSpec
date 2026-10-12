@@ -1,0 +1,155 @@
+<Window x:Class="TNovMEPSpec.MEPSpecOVVKSystemAbbrWPF"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:TNovMEPSpec"
+        mc:Ignorable="d"
+        Width="720"
+        Height="480"
+        MinWidth="560"
+        MinHeight="300"
+        d:DataContext="{d:DesignInstance local:MEPSpecOVVKSystemAbbrViewModel}"
+        WindowStartupLocation="CenterScreen"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="CanResizeWithGrip"
+        WindowStyle="None">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="PrecheckGridHeaderStyle" TargetType="DataGridColumnHeader">
+                <Setter Property="Background" Value="{StaticResource CardBrush}"/>
+                <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                <Setter Property="Padding" Value="8,6"/>
+                <Setter Property="BorderBrush" Value="{StaticResource AccentBrush}"/>
+                <Setter Property="BorderThickness" Value="0,0,0,1"/>
+                <Setter Property="FontWeight" Value="SemiBold"/>
+            </Style>
+            <Style x:Key="PrecheckGridCellStyle" TargetType="DataGridCell">
+                <Setter Property="Padding" Value="6,4"/>
+                <Setter Property="BorderThickness" Value="0"/>
+                <Setter Property="Foreground" Value="{StaticResource MutedBrush}"/>
+                <Setter Property="Background" Value="Transparent"/>
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="DataGridCell">
+                            <Border Padding="{TemplateBinding Padding}"
+                                    Background="{TemplateBinding Background}"
+                                    BorderBrush="{TemplateBinding BorderBrush}"
+                                    BorderThickness="{TemplateBinding BorderThickness}">
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </Border>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            <Style x:Key="PrecheckTextBoxStyle" TargetType="TextBox" BasedOn="{StaticResource DarkCompactTextBoxStyle}">
+                <Style.Triggers>
+                    <DataTrigger Binding="{Binding Tag, RelativeSource={RelativeSource Self}}" Value="True">
+                        <Setter Property="BorderBrush" Value="#E05A5A"/>
+                    </DataTrigger>
+                </Style.Triggers>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
+    </WindowChrome.WindowChrome>
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <Grid Margin="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" MouseDown="TitleBar_MouseDown" Background="Transparent" Cursor="Arrow" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="СВОДНАЯ СПЕКА"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="✕"
+                            Grid.Column="1"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="escButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
+            </Border>
+
+            <TextBlock Grid.Row="1"
+                       Text="Латинские буквы в типах систем не допускаются, переименуйте типы систем:"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource MutedBrush}"
+                       FontSize="12"
+                       Margin="0,0,0,12"/>
+
+            <Border Grid.Row="2" Style="{StaticResource PanelFrameStyle}" Margin="0,0,0,12" Padding="0">
+                <DataGrid ItemsSource="{Binding Rows}"
+                          AutoGenerateColumns="False"
+                          CanUserAddRows="False"
+                          CanUserDeleteRows="False"
+                          CanUserResizeRows="False"
+                          HeadersVisibility="Column"
+                          GridLinesVisibility="Horizontal"
+                          RowHeaderWidth="0"
+                          SelectionMode="Single"
+                          Background="Transparent"
+                          BorderThickness="0"
+                          HorizontalGridLinesBrush="{StaticResource CardBrush}"
+                          VerticalGridLinesBrush="Transparent"
+                          ColumnHeaderStyle="{StaticResource PrecheckGridHeaderStyle}"
+                          CellStyle="{StaticResource PrecheckGridCellStyle}"
+                          RowBackground="Transparent"
+                          AlternatingRowBackground="{StaticResource CardBrush}"
+                          AlternationCount="2"
+                          Foreground="{StaticResource MutedBrush}">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Класс" Binding="{Binding SystemClass}" Width="*" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Тип системы" Binding="{Binding TypeName}" Width="1.5*" IsReadOnly="True"/>
+                        <DataGridTemplateColumn Header="Сокращение для системы" Width="*">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding Abbreviation, UpdateSourceTrigger=PropertyChanged}"
+                                             Tag="{Binding HasError}"
+                                             Style="{StaticResource PrecheckTextBoxStyle}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+
+            <Button Grid.Row="3"
+                    Content="Применить"
+                    Style="{StaticResource RunButtonStyle}"
+                    IsEnabled="{Binding CanApply}"
+                    IsDefault="True"
+                    Click="acceptButton_Click"/>
+            <Button Grid.Row="4"
+                    Content="Отмена"
+                    Style="{StaticResource CloseButtonStyle}"
+                    IsCancel="True"
+                    Click="escButton_Click"/>
+        </Grid>
+    </Border>
+</Window>

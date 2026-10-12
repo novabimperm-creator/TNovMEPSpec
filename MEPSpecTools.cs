@@ -6,6 +6,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using TNovCommon;
 using static Autodesk.Revit.DB.SpecTypeId;
@@ -931,6 +932,148 @@ namespace TNovMEPSpec
                 return "";
             }
         }
+
+        #region Предпроверки ВК ОВ
+        public static bool HasLatin(string s)
+        {
+            return Regex.IsMatch(s ?? "", "[A-Za-z]");
+        }
+
+        //типы размещенных трубопроводных систем и систем воздуховодов с латиницей в сокращении
+        public static List<OVVKSystemAbbrRow> CollectLatinSystemTypes(Document doc)
+        {
+            List<OVVKSystemAbbrRow> rows = new List<OVVKSystemAbbrRow>();
+            HashSet<ElementId> seen = new HashSet<ElementId>();
+            var sources = new List<(BuiltInCategory cat, string title)>
+            {
+                (BuiltInCategory.OST_PipingSystem, "Трубопроводная система"),
+                (BuiltInCategory.OST_DuctSystem, "Система воздуховодов")
+            };
+            foreach (var src in sources)
+            {
+                List<Element> systems = new FilteredElementCollector(doc).OfCategory(src.cat)
+                    .WhereElementIsNotElementType()
+                    .ToElements()
+                    .ToList();
+                foreach (Element sys in systems)
+                {
+                    ElementId typeId = sys.GetTypeId();
+                    if (typeId == null || typeId == ElementId.InvalidElementId || !seen.Add(typeId)) continue;
+                    Element type = doc.GetElement(typeId);
+                    if (type == null) continue;
+                    string abbr = type.get_Parameter(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM)?.AsString() ?? "";
+                    if (!HasLatin(abbr)) continue;
+                    rows.Add(new OVVKSystemAbbrRow { TypeId = typeId, SystemClass = src.title, TypeName = type.Name, Abbreviation = abbr });
+                }
+            }
+
+            //элементы сетей: их сокращение может ссылаться на тип, не найденный через экземпляры систем (фитинги и т.п.)
+            var elemCats = new List<BuiltInCategory>
+            {
+                BuiltInCategory.OST_PipeCurves, BuiltInCategory.OST_PipeFitting, BuiltInCategory.OST_PipeAccessory,
+                BuiltInCategory.OST_FlexPipeCurves, BuiltInCategory.OST_PipeInsulations, BuiltInCategory.OST_PlumbingFixtures,
+                BuiltInCategory.OST_MechanicalEquipment, BuiltInCategory.OST_DuctCurves, BuiltInCategory.OST_DuctFitting,
+                BuiltInCategory.OST_DuctAccessory, BuiltInCategory.OST_FlexDuctCurves, BuiltInCategory.OST_DuctInsulations,
+                BuiltInCategory.OST_DuctTerminal
+            };
+            List<Element> mepElems = new FilteredElementCollector(doc)
+                .WherePasses(new ElementMulticategoryFilter(elemCats))
+                .WhereElementIsNotElementType()
+                .ToElements()
+                .ToList();
+            List<string> stale = new List<string>();
+            foreach (Element e in mepElems)
+            {
+                string elemAbbr = e.get_Parameter(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM)?.AsString() ?? "";
+                if (!HasLatin(elemAbbr)) continue;
+                bool isDuct = false;
+                ElementId typeId = e.get_Parameter(BuiltInParameter.RBS_PIPING_SYSTEM_TYPE_PARAM)?.AsElementId();
+                if (typeId == null || typeId == ElementId.InvalidElementId)
+                {
+                    typeId = e.get_Parameter(BuiltInParameter.RBS_DUCT_SYSTEM_TYPE_PARAM)?.AsElementId();
+                    isDuct = true;
+                }
+                Element type = (typeId == null || typeId == ElementId.InvalidElementId) ? null : doc.GetElement(typeId);
+                string typeAbbr = type?.get_Parameter(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM)?.AsString() ?? "";
+                if (type != null && HasLatin(typeAbbr))
+                {
+                    if (seen.Add(typeId))
+                        rows.Add(new OVVKSystemAbbrRow { TypeId = typeId, SystemClass = isDuct ? "Система воздуховодов" : "Трубопроводная система", TypeName = type.Name, Abbreviation = typeAbbr });
+                    continue;
+                }
+                //у типа сокращение уже без латиницы (или тип не определен) - значение элемента не обновилось
+                stale.Add($"{e.Id} ({e.Category?.Name}): '{elemAbbr}', тип системы: {(type == null ? "не определен" : type.Name + " '" + typeAbbr + "'")}");
+            }
+            if (stale.Count > 0)
+            {
+                Logger.Log("Предпроверка: элементы с латиницей в сокращении, не исправляемые через тип системы: " + stale.Count.ToString(), 3);
+                foreach (string s in stale) Logger.Log("   " + s, 3);
+            }
+            return rows.OrderBy(r => r.SystemClass).ThenBy(r => r.TypeName).ToList();
+        }
+
+        public static void ApplySystemAbbreviations(Document doc, IEnumerable<OVVKSystemAbbrRow> rows)
+        {
+            using (Transaction t = new Transaction(doc))
+            {
+                TransactionHandler.SetWarningResolver(t);
+                t.Start("TNov - Сводная спека: сокращения систем");
+                foreach (var r in rows)
+                {
+                    try
+                    {
+                        doc.GetElement(r.TypeId)?.get_Parameter(BuiltInParameter.RBS_SYSTEM_ABBREVIATION_PARAM)?.Set(r.Abbreviation.Trim());
+                        Logger.Log($"   {r.TypeName}: сокращение '{r.Abbreviation.Trim()}'", 1);
+                    }
+                    catch (Exception ex) { Logger.Log($"   {r.TypeId} Ошибка записи сокращения: {ex.Message}", 4); }
+                }
+                t.Commit();
+            }
+        }
+
+        //типы обрабатываемых элементов с пустой Маркировкой типоразмера или Комментариями к типоразмеру
+        public static List<OVVKTypeFillRow> CollectUnfilledTypes(Document doc, IEnumerable<(string category, IEnumerable<Element> elems)> sources)
+        {
+            List<OVVKTypeFillRow> rows = new List<OVVKTypeFillRow>();
+            HashSet<ElementId> seen = new HashSet<ElementId>();
+            foreach (var src in sources)
+            {
+                foreach (Element e in src.elems)
+                {
+                    ElementId typeId = e.GetTypeId();
+                    if (typeId == null || typeId == ElementId.InvalidElementId || !seen.Add(typeId)) continue;
+                    Element type = doc.GetElement(typeId);
+                    if (type == null) continue;
+                    string mark = type.get_Parameter(BuiltInParameter.WINDOW_TYPE_ID)?.AsString() ?? "";
+                    string comments = type.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)?.AsString() ?? "";
+                    if (!string.IsNullOrWhiteSpace(mark) && !string.IsNullOrWhiteSpace(comments)) continue;
+                    rows.Add(new OVVKTypeFillRow { TypeId = typeId, Category = src.category, TypeName = type.Name, TypeMark = mark, TypeComments = comments });
+                }
+            }
+            return rows;
+        }
+
+        public static void ApplyTypeParams(Document doc, IEnumerable<OVVKTypeFillRow> rows)
+        {
+            using (Transaction t = new Transaction(doc))
+            {
+                TransactionHandler.SetWarningResolver(t);
+                t.Start("TNov - Сводная спека: параметры типов");
+                foreach (var r in rows)
+                {
+                    try
+                    {
+                        Element type = doc.GetElement(r.TypeId);
+                        type?.get_Parameter(BuiltInParameter.WINDOW_TYPE_ID)?.Set(r.TypeMark.Trim());
+                        type?.get_Parameter(BuiltInParameter.ALL_MODEL_TYPE_COMMENTS)?.Set(r.TypeComments.Trim());
+                        Logger.Log($"   {r.Category} {r.TypeName}: '{r.TypeMark.Trim()}' / '{r.TypeComments.Trim()}'", 1);
+                    }
+                    catch (Exception ex) { Logger.Log($"   {r.TypeId} Ошибка записи параметров типа: {ex.Message}", 4); }
+                }
+                t.Commit();
+            }
+        }
+        #endregion
 
     }
 

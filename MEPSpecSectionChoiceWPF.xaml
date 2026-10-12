@@ -1,0 +1,66 @@
+<Window x:Class="TNovMEPSpec.MEPSpecSectionChoiceWPF"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="380"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterScreen"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        WindowStyle="None">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="0"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
+    </WindowChrome.WindowChrome>
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <StackPanel Margin="18">
+            <Border MouseDown="TitleBar_MouseDown" Background="Transparent" Cursor="Arrow" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="СВОДНАЯ СПЕКА"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="✕"
+                            Grid.Column="1"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="escButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
+            </Border>
+
+            <TextBlock Text="Не удалось определить раздел по имени модели. Выберите раздел вручную:"
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource MutedBrush}"
+                       FontSize="12"
+                       Margin="0,0,0,12"/>
+
+            <Button Content="ВК / ОВ" Tag="vkov" Style="{StaticResource RunButtonStyle}" Click="sectionButton_Click"/>
+            <Button Content="ЭЛ" Tag="el" Style="{StaticResource RunButtonStyle}" Click="sectionButton_Click"/>
+            <Button Content="СС / ПС" Tag="ss" Style="{StaticResource RunButtonStyle}" Click="sectionButton_Click"/>
+            <Button Content="Отмена"
+                    Style="{StaticResource CloseButtonStyle}"
+                    IsCancel="True"
+                    Click="escButton_Click"/>
+        </StackPanel>
+    </Border>
+</Window>

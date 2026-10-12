@@ -539,10 +539,10 @@
                                         <TextBlock Text="Обрабатывать каталоги"
                                                    Style="{StaticResource CardTitleStyle}"/>
                                         <TextBlock Style="{StaticResource CardSubtitleStyle}">
-                                            <Hyperlink NavigateUri="https://tnov.pm-nova.ru/wiki/#MEPcatalogs"
-                                                       RequestNavigate="Hyperlink_RequestNavigate"
-                                                       Style="{StaticResource MutedHyperlinkStyle}">
-                                                справка
+                                            <Hyperlink Click="WhatIsProcessed_Click"
+                                                       Style="{StaticResource MutedHyperlinkStyle}"
+                                                       Tag="Обрабатывать каталоги — уже в плагине:&#x0a;&#x0a;• Изоляция ROLS-ISOMARKET (трубы и воздуховоды): наименование и артикул по типу изоляции, толщине и диаметру трубы. Второй слой изоляции выводится отдельной строкой «Второй слой изоляции» (при включённом заполнении ADSK Наименование и ADSK Количество).&#x0a;&#x0a;• Фитинги PEX Valtec, STOUT, REHAU: артикулы по коду фитинга СШПЭ и присоединённой трубе.&#x0a;&#x0a;• Клапаны Сигма-Вент: марка и наименование кассетных клапанов, марка прочих клапанов (по «Комментарии к типоразмеру»).">
+                                                Что обрабатывается?
                                             </Hyperlink>
                                         </TextBlock>
                                     </StackPanel>
@@ -555,10 +555,10 @@
                                         <TextBlock Text="Построить немоделируемые элементы"
                                                    Style="{StaticResource CardTitleStyle}"/>
                                         <TextBlock Style="{StaticResource CardSubtitleStyle}">
-                                            <Hyperlink NavigateUri="https://tnov.pm-nova.ru/wiki/#MEPcatalogs"
-                                                       RequestNavigate="Hyperlink_RequestNavigate"
-                                                       Style="{StaticResource MutedHyperlinkStyle}">
-                                                справка
+                                            <Hyperlink Click="WhatIsProcessed_Click"
+                                                       Style="{StaticResource MutedHyperlinkStyle}"
+                                                       Tag="Построить немоделируемые элементы — уже в плагине:&#x0a;&#x0a;• Изоляция ROLS (воздуховоды и трубы) и ET Vent (воздуховоды): клей, разбавитель, ленты и покровные материалы по таблице «Немоделируемые».&#x0a;&#x0a;Создаются экземпляры «pmN.Условное семейство Экземпляр»; в модели должен быть размещён хотя бы один экземпляр нужного типа.">
+                                                Что обрабатывается?
                                             </Hyperlink>
                                         </TextBlock>
                                     </StackPanel>

@@ -122,6 +122,7 @@ namespace TNovMEPSpec
             docName = docName.Replace(",", "");
             #endregion
             TNovConfig config = TNovConfigLoad.LoadConfig(DBCommandName, TNovVersion);
+            if (config == null || !CorpGate.Require(config)) return Result.Failed;
             #region Настройки логов
             // создание log - файла
             Logger.Initialize(DBCommandName,dateTime,TNovVersion);
@@ -158,6 +159,23 @@ namespace TNovMEPSpec
             if (docName.Contains("-ВК") || docName.Contains("_ВК") || docName.Contains("-ПТ") || docName.Contains("_ПТ")
                 || docName.Contains("-ОВ") || docName.Contains("_ОВ") || docName.Contains("-ТС") || docName.Contains("_ТС")
                 || docName.Contains("Шаблон ВК") || docName.Contains("Шаблон ОВ")) vkov = true;
+            if (!ss && !el && !vkov)
+            {
+                Logger.Log("Раздел не определён по имени модели, запрос выбора у пользователя", 3);
+                var sectionWindow = new MEPSpecSectionChoiceWPF();
+                if (sectionWindow.ShowDialog() != true || sectionWindow.SelectedSection == null)
+                {
+                    Logger.Log("Раздел не выбран. Завершение работы.", 3);
+                    return Result.Cancelled;
+                }
+                switch (sectionWindow.SelectedSection)
+                {
+                    case "ss": ss = true; break;
+                    case "el": el = true; break;
+                    case "vkov": vkov = true; break;
+                }
+                Logger.Log("Раздел выбран вручную: " + sectionWindow.SelectedSection, 1);
+            }
             #endregion
             #region СС
             if (ss)
@@ -846,6 +864,21 @@ namespace TNovMEPSpec
                 int failscount = 0;
                 List<ElementId> failed1 = new List<ElementId>(); List<ElementId> failed2 = new List<ElementId>(); List<ElementId> failed3 = new List<ElementId>(); List<ElementId> failed4 = new List<ElementId>();
 
+                //при Result.Cancelled Revit откатывает все транзакции команды - исправления предпроверок тоже.
+                //Если они уже записаны, при отмене возвращаем Succeeded, чтобы правки сохранились
+                bool precheckApplied = false;
+                //предпроверка: латиница в сокращениях типов систем
+                while (true)
+                {
+                    List<OVVKSystemAbbrRow> latinRows = MEPSpecTools.CollectLatinSystemTypes(doc);
+                    if (latinRows.Count == 0) break;
+                    Logger.Log("Предпроверка: типов систем с латиницей в сокращении: " + latinRows.Count.ToString(), 3);
+                    var abbrView = new MEPSpecOVVKSystemAbbrWPF(new MEPSpecOVVKSystemAbbrViewModel(latinRows));
+                    if (abbrView.ShowDialog() != true) { Logger.Log("Запуск отменен пользователем. Завершение работы.", 3); return precheckApplied ? Result.Succeeded : Result.Cancelled; }
+                    MEPSpecTools.ApplySystemAbbreviations(doc, latinRows);
+                    precheckApplied = true;
+                }
+
                 // Диалоговое окно
                 Logger.Log("Элементы собраны. Диалог", 1);
 
@@ -861,7 +894,7 @@ namespace TNovMEPSpec
                 if (typeMarksString.Length == 0)
                 {
                     new InfoWindow280("В данной модели отсутствуют элементы для обработки!").ShowDialog();
-                    Logger.Log("Элементы в модели отсутствуют. Завершение работы.", 3); return Result.Cancelled;
+                    Logger.Log("Элементы в модели отсутствуют. Завершение работы.", 3); return precheckApplied ? Result.Succeeded : Result.Cancelled;
                 }
                 //данные вне сериализации
                 viewModel.types = typeMarksString;
@@ -884,7 +917,7 @@ namespace TNovMEPSpec
                 viewModel.CloseRequest += (s, e) => wpfview.Close();
                 bool? ok = wpfview.ShowDialog();
                 if (ok != null && ok == true) { }
-                else { Logger.Log("Запуск отменен пользователем. Завершение работы.", 3); return Result.Cancelled; }
+                else { Logger.Log("Запуск отменен пользователем. Завершение работы.", 3); return precheckApplied ? Result.Succeeded : Result.Cancelled; }
                 //Сериализация
                 try
                 {
@@ -927,7 +960,7 @@ namespace TNovMEPSpec
                         catch (Autodesk.Revit.Exceptions.OperationCanceledException e)
                         {
                             Logger.Log("Запуск отменен пользователем. Завершение работы: " + e.Message, 3);
-                            return Result.Cancelled;
+                            return precheckApplied ? Result.Succeeded : Result.Cancelled;
                         }
                         foreach (Element element in selectedElements) 
                         {
@@ -1009,6 +1042,25 @@ namespace TNovMEPSpec
                     rebar = rebar.Where(e => selectedIds.Contains((int)e.Id.Value)).ToList();
 #endif
                 }
+                //предпроверка: Маркировка типоразмера и Комментарии к типоразмеру у типов обрабатываемых элементов
+                if (viewModel.runadskp)
+                {
+                    var typeSources = new List<(string category, IEnumerable<Element> elems)>();
+                    if (viewModel.run11) typeSources.Add(("Трубы", Trub));
+                    if (viewModel.run12) typeSources.Add(("Материалы изоляции труб", IsolTrub));
+                    if (viewModel.run5) typeSources.Add(("Воздуховоды", Vozd));
+                    if (viewModel.run6) typeSources.Add(("Материалы изоляции воздуховодов", IsolVozd));
+                    while (true)
+                    {
+                        List<OVVKTypeFillRow> typeRows = MEPSpecTools.CollectUnfilledTypes(doc, typeSources);
+                        if (typeRows.Count == 0) break;
+                        Logger.Log("Предпроверка: типов с незаполненной маркировкой/комментариями: " + typeRows.Count.ToString(), 3);
+                        var typeView = new MEPSpecOVVKTypeFillWPF(new MEPSpecOVVKTypeFillViewModel(typeRows));
+                        if (typeView.ShowDialog() != true) { Logger.Log("Запуск отменен пользователем. Завершение работы.", 3); return precheckApplied ? Result.Succeeded : Result.Cancelled; }
+                        MEPSpecTools.ApplyTypeParams(doc, typeRows);
+                        precheckApplied = true;
+                    }
+                }
                 if (viewModel.runCatalogs || viewModel.runNonModel)
                 {
                     //проверка Excel
@@ -1085,6 +1137,7 @@ namespace TNovMEPSpec
                 int allcountPB = allcount;
                 if (viewModel.runadskp) allcountPB += vkovRuns.Where(r => r.IsActive && r.AdskpCategory != null).Sum(r => r.Elements.Count);
 
+                List<moduleROLS.SecondLayer> rolsSecondLayers = null; //второй слой изоляции ROLS - немоделируемые после основной транзакции
                 bool vkovCommitted = false;
                 if (viewModel.runadskg || viewModel.runNCat || viewModel.runadskp)
                 {
@@ -1175,6 +1228,51 @@ namespace TNovMEPSpec
                                         Logger.Log($"      {a.Id} Ошибка PEX: {ex.Message}", 4);
                                     }
                                     if (success4 == false) { failed4.Add(a.Id); failscount++; continue; }
+                                }
+                            }
+
+                            //каталог Сигма-Вент для арматуры воздуховодов: марка (и наименование кассетных клапанов) по СВ_-параметрам
+                            if (runcatalogs && viewModel.run1 && ArmVozd.Count > 0)
+                            {
+                                Logger.Log("Каталог Сигма-Вент:", 1);
+                                foreach (Element a in ArmVozd)
+                                {
+                                    bool success5;
+                                    try { success5 = moduleSigmaVent.SetParams(a); }
+                                    catch (Exception ex)
+                                    {
+                                        success5 = false;
+                                        Logger.Log($"      {a.Id} Ошибка Сигма-Вент: {ex.Message}", 4);
+                                    }
+                                    if (!success5) { failed4.Add(a.Id); failscount++; }
+                                }
+                            }
+
+                            //каталог ROLS для изоляции труб и воздуховодов - после прохода 2: делит ADSK_Количество между слоями
+                            List<Element> rolsIsol = new List<Element>();
+                            if (viewModel.run12) rolsIsol.AddRange(IsolTrub);
+                            if (viewModel.run6) rolsIsol.AddRange(IsolVozd);
+                            if (runcatalogs && rolsIsol.Count > 0)
+                            {
+                                Logger.Log("Каталог ROLS:", 1);
+                                moduleROLS.Catalog rolsCatalog = null;
+                                try { rolsCatalog = moduleROLS.ReadCatalog(); }
+                                catch (Exception ex) { Logger.Log("Ошибка чтения каталога ROLS: " + ex.Message, 4); }
+                                if (rolsCatalog != null)
+                                {
+                                    //без прохода 2 количество не пересчитано - повторное деление по слоям его бы уменьшало
+                                    if (runadskp) rolsSecondLayers = new List<moduleROLS.SecondLayer>();
+                                    foreach (Element a in rolsIsol)
+                                    {
+                                        bool success6;
+                                        try { success6 = moduleROLS.SetParams(a, rolsCatalog, rolsSecondLayers); }
+                                        catch (Exception ex)
+                                        {
+                                            success6 = false;
+                                            Logger.Log($"      {a.Id} Ошибка ROLS: {ex.Message}", 4);
+                                        }
+                                        if (!success6) { failed4.Add(a.Id); failscount++; }
+                                    }
                                 }
                             }
 
@@ -1292,6 +1390,26 @@ namespace TNovMEPSpec
                     }
                 }
 
+                //второй слой изоляции ROLS - после немоделируемых
+                if (rolsSecondLayers != null && vkovCommitted)
+                {
+                    using (Transaction transaction3 = new Transaction(doc))
+                    {
+                        transaction3.Start("TNov - второй слой изоляции");
+                        Logger.Log("Второй слой изоляции ROLS:", 1);
+                        try
+                        {
+                            moduleROLS.GenerateSecondLayers(doc, rolsSecondLayers);
+                            transaction3.Commit();
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log("Ошибка создания второго слоя изоляции: " + ex.Message, 4);
+                            transaction3.RollBack();
+                        }
+                    }
+                }
+
                 if (allcount == 0) new InfoWindow280("Нечего обрабатывать.").ShowDialog();
 
                 if (failscount > 0)
@@ -1344,8 +1462,6 @@ namespace TNovMEPSpec
 #endregion
             else
             {
-                new InfoWindow280("Плагин работает по разным сценариям в зависимости от раздела. Похоже, ваш файл не относится к" +
-                " разделу ВК/ПТ/ОВ/ЭЛ/СС. Раздел должен содержаться в имени модели.").ShowDialog();
                 Logger.Log("Раздел не является ВК/ПТ/ОВ/ЭЛ/СС. Завершение работы.", 3);
             }
             if (unhandledError)
