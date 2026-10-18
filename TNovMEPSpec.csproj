@@ -34,9 +34,10 @@
     <ProjectReference Include="..\TNovCommon\TNovCommon.csproj" Private="false" />
   </ItemGroup>
 
-  <!-- ===== Версионирование ===== -->
-  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="powershell -ExecutionPolicy Bypass -File &quot;$(ProjectDir)UpdateVersion.ps1&quot;" />
-  </Target>
+  <!-- ===== Версионирование =====
+       Версия 2.гг.ММдд.минуты генерируется при сборке в obj (TNovGenerateVersionInfo в TNovDeploy\TNov.Build.props). -->
+  <PropertyGroup>
+    <TNovMajorVersion>2</TNovMajorVersion>
+  </PropertyGroup>
 
 </Project>
