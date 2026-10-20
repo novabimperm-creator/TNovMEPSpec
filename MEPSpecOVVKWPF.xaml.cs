@@ -118,6 +118,25 @@ namespace TNovMEPSpec
             e.Handled = true;
         }
 
+        //окно «Немоделируемые»: элементы условных семейств в модели и каталог
+        private void nonModelButton_Click(object sender, RoutedEventArgs e)
+        {
+            var viewModel = (MEPSpecOVVKViewModel)DataContext;
+            var nonModelVm = new MEPSpecNonModelViewModel(RevitAPI.Document);
+            try
+            {
+                nonModelVm.EnsureFamilies();
+                nonModelVm.Reload();
+                new MEPSpecNonModelWPF(nonModelVm) { Owner = this }.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                Logger.Log("Немоделируемые: " + ex.Message, 4);
+                new InfoWindow280("Ошибка: " + ex.Message) { Owner = this }.ShowDialog();
+            }
+            if (nonModelVm.ModelChanged) viewModel.nonModelChanged = true;
+        }
+
         private void Hyperlink_RequestNavigate(object sender, RequestNavigateEventArgs e)
         {
 

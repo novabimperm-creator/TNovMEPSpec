@@ -867,6 +867,22 @@ namespace TNovMEPSpec
                 //при Result.Cancelled Revit откатывает все транзакции команды - исправления предпроверок тоже.
                 //Если они уже записаны, при отмене возвращаем Succeeded, чтобы правки сохранились
                 bool precheckApplied = false;
+                //предпроверка: имена типов ручных немоделируемых = ADSK_Наименование
+                using (Transaction tNames = new Transaction(doc, "TNov - имена типов немоделируемых"))
+                {
+                    tNames.Start();
+                    try
+                    {
+                        int renamed = NonModelElementService.SyncManualTypeNames(doc);
+                        if (renamed > 0) { tNames.Commit(); precheckApplied = true; Logger.Log("Предпроверка: имена типов немоделируемых, изменений: " + renamed, 3); }
+                        else tNames.RollBack();
+                    }
+                    catch (Exception ex)
+                    {
+                        Logger.Log("Предпроверка имён типов немоделируемых: " + ex.Message, 4);
+                        if (tNames.HasStarted() && !tNames.HasEnded()) tNames.RollBack();
+                    }
+                }
                 //предпроверка: латиница в сокращениях типов систем
                 while (true)
                 {
@@ -916,6 +932,7 @@ namespace TNovMEPSpec
                 var wpfview = new MEPSpecOVVKWPF(viewModel);
                 viewModel.CloseRequest += (s, e) => wpfview.Close();
                 bool? ok = wpfview.ShowDialog();
+                if (viewModel.nonModelChanged) precheckApplied = true; //правки из окна «Немоделируемые»
                 if (ok != null && ok == true) { }
                 else { Logger.Log("Запуск отменен пользователем. Завершение работы.", 3); return precheckApplied ? Result.Succeeded : Result.Cancelled; }
                 //Сериализация
@@ -1382,6 +1399,10 @@ namespace TNovMEPSpec
 
                         //обработка немоделируемых
                         Logger.Log("Запускаем обработку немоделируемых", 1);
+
+                        //семейство генерации: загрузить с сервера и разместить в 0,0,0, если его нет
+                        string familyProblem = NonModelElementService.EnsurePlaced(doc, NonModelFamilyNames.Generated, NonModelFamilyNames.GeneratedRfa, out _);
+                        if (familyProblem != null) Logger.Log(familyProblem, 4);
 
                         new IsolNonModel().Generate(IsolVozd, IsolTrub, out countElems);
 

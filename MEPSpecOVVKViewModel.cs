@@ -87,6 +87,8 @@ namespace TNovMEPSpec
         [JsonIgnore] public bool visibility11; [JsonIgnore] public bool visibility12;
         [JsonIgnore] public bool visibility13; [JsonIgnore] public bool visibility14;
         [JsonIgnore] public string fileName;
+        //в окне «Немоделируемые» менялась модель: при отмене запуска эти транзакции нельзя откатывать
+        [JsonIgnore] public bool nonModelChanged;
         public bool runNonModel { get { return _runNonModel; } set { _runNonModel = value; OnPropertyChanged(); } }
         public bool runadskg { get { return _runadskg; } set { _runadskg = value; OnPropertyChanged(); } }
         public bool runadskp { get { return _runadskp; } set { _runadskp = value; OnPropertyChanged(); } }

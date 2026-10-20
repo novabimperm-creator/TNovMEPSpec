@@ -1,0 +1,65 @@
+<Window x:Class="TNovMEPSpec.MEPSpecNonModelAddWPF"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Width="440"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        WindowStyle="None">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <StackPanel Margin="18">
+            <Border MouseDown="TitleBar_MouseDown" Background="Transparent" Margin="0,0,0,10">
+                <TextBlock Text="ДОБАВИТЬ В МОДЕЛЬ"
+                           Foreground="{StaticResource AccentBrush}"
+                           FontSize="16"
+                           FontWeight="Bold"/>
+            </Border>
+
+            <TextBlock x:Name="naimText"
+                       Style="{StaticResource CardTitleStyle}"
+                       TextWrapping="Wrap"
+                       Margin="0,0,0,12"/>
+
+            <TextBlock Text="ADSK_Группирование" Style="{StaticResource CardSubtitleStyle}" Margin="0,0,0,4"/>
+            <TextBox x:Name="groupingBox" Style="{StaticResource DarkCompactTextBoxStyle}"/>
+            <TextBlock Text="Несколько значений через запятую — по элементу на каждое"
+                       Style="{StaticResource CardSubtitleStyle}"
+                       Margin="0,4,0,12"/>
+
+            <TextBlock Text="ADSK_Количество (для каждого элемента)" Style="{StaticResource CardSubtitleStyle}" Margin="0,0,0,4"/>
+            <TextBox x:Name="quantityBox" Text="1" Style="{StaticResource DarkCompactTextBoxStyle}" Margin="0,0,0,16"/>
+
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Button Grid.Column="0"
+                        Content="Отмена"
+                        Style="{StaticResource CloseButtonStyle}"
+                        IsCancel="True"
+                        Click="escButton_Click"/>
+                <Button Grid.Column="2"
+                        Content="Добавить"
+                        Style="{StaticResource RunButtonStyle}" Margin="0"
+                        IsDefault="True"
+                        Click="acceptButton_Click"/>
+            </Grid>
+        </StackPanel>
+    </Border>
+</Window>

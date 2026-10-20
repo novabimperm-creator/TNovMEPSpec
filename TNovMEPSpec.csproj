@@ -15,6 +15,12 @@
     <PackageReference Include="Newtonsoft.Json" Version="13.0.4" />
   </ItemGroup>
 
+  <!-- Стартовый каталог немоделируемых: копируется на сервер при первом открытии каталога. -->
+  <ItemGroup>
+    <None Remove="MEPCatalog.json" />
+    <EmbeddedResource Include="MEPCatalog.json" LogicalName="TNovMEPSpec.MEPCatalog.json" />
+  </ItemGroup>
+
   <!-- Excel interop: на net48 из GAC со встраиванием типов (как в оригинале,
        иначе индексаторы COM возвращают object вместо dynamic). На .NET 10 — из NuGet. -->
   <ItemGroup Condition="'$(TargetFramework)' == 'net48'">

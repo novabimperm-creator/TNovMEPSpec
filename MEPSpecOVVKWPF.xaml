@@ -523,15 +523,7 @@
                        Style="{StaticResource CardSubtitleStyle}"/>
                                 </StackPanel>
                             </ToggleButton>
-                        </Grid>
-
-                        <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="8"/>
-                                    <ColumnDefinition Width="*"/>
-                                </Grid.ColumnDefinitions>
-                                <ToggleButton Grid.Column="0"
+                                <ToggleButton Grid.Column="2"
                                               Style="{StaticResource CardToggleStyle}"
                                               Margin="0"
                                               IsChecked="{Binding runCatalogs}">
@@ -547,23 +539,48 @@
                                         </TextBlock>
                                     </StackPanel>
                                 </ToggleButton>
+                        </Grid>
+
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="8"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                                <Button Grid.Column="0"
+                                        Style="{StaticResource ActionButtonStyle}"
+                                        Background="{StaticResource HighlightBrush}"
+                                        HorizontalContentAlignment="Left"
+                                        Padding="14,11"
+                                        Margin="0"
+                                        Click="nonModelButton_Click">
+                                    <StackPanel>
+                                        <TextBlock Text="Немоделируемые вручную"
+                                                   Style="{StaticResource CardTitleStyle}"
+                                                   Foreground="{StaticResource HighlightTextBrush}"/>
+                                        <TextBlock Text="Редактировать и добавить из каталога"
+                                                   Style="{StaticResource CardSubtitleStyle}"
+                                                   Foreground="{StaticResource HighlightTextBrush}"
+                                                   Opacity="0.75"/>
+                                    </StackPanel>
+                                </Button>
                                 <ToggleButton Grid.Column="2"
                                               Style="{StaticResource CardToggleStyle}"
                                               Margin="0"
                                               IsChecked="{Binding runNonModel}">
                                     <StackPanel>
-                                        <TextBlock Text="Построить немоделируемые элементы"
+                                        <TextBlock Text="Немоделируемые по каталогам"
                                                    Style="{StaticResource CardTitleStyle}"/>
                                         <TextBlock Style="{StaticResource CardSubtitleStyle}">
                                             <Hyperlink Click="WhatIsProcessed_Click"
                                                        Style="{StaticResource MutedHyperlinkStyle}"
-                                                       Tag="Построить немоделируемые элементы — уже в плагине:&#x0a;&#x0a;• Изоляция ROLS (воздуховоды и трубы) и ET Vent (воздуховоды): клей, разбавитель, ленты и покровные материалы по таблице «Немоделируемые».&#x0a;&#x0a;Создаются экземпляры «pmN.Условное семейство Экземпляр»; в модели должен быть размещён хотя бы один экземпляр нужного типа.">
+                                                       Tag="Немоделируемые по каталогам — уже в плагине:&#x0a;&#x0a;• Изоляция ROLS (воздуховоды и трубы) и ET Vent (воздуховоды): клей, разбавитель, ленты и покровные материалы по таблице «Немоделируемые».&#x0a;&#x0a;Создаются экземпляры «pmN.Условное семейство Экземпляр»; в модели должен быть размещён хотя бы один экземпляр нужного типа.">
                                                 Что обрабатывается?
                                             </Hyperlink>
                                         </TextBlock>
                                     </StackPanel>
                                 </ToggleButton>
-                            </Grid>
+                        </Grid>
                     </StackPanel>
                 </StackPanel>
             </Border>
@@ -577,7 +594,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <Button Grid.Column="0"
-                        Content="Отмена"
+                        Content="Закрыть"
                         x:Name="escButton"
                         Style="{StaticResource CloseButtonStyle}"
                         IsCancel="True"

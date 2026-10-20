@@ -1,0 +1,143 @@
+<Window x:Class="TNovMEPSpec.MEPSpecNonModelCatalogWPF"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:TNovMEPSpec"
+        mc:Ignorable="d"
+        Width="1150"
+        Height="600"
+        MinWidth="700"
+        MinHeight="320"
+        d:DataContext="{d:DesignInstance local:MEPSpecNonModelCatalogViewModel}"
+        WindowStartupLocation="CenterOwner"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="CanResizeWithGrip"
+        WindowStyle="None">
+
+    <Window.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="/TNovCommon;component/Styles.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+            <Style x:Key="CatalogEditStyle" TargetType="TextBox" BasedOn="{StaticResource DarkCompactTextBoxStyle}"/>
+            <Style x:Key="CatalogCellTextStyle" TargetType="TextBlock" BasedOn="{StaticResource DarkDataGridTextElementStyle}">
+                <Setter Property="TextWrapping" Value="Wrap"/>
+            </Style>
+        </ResourceDictionary>
+    </Window.Resources>
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="30"
+                      ResizeBorderThickness="5"
+                      GlassFrameThickness="0"
+                      CornerRadius="12"/>
+    </WindowChrome.WindowChrome>
+
+    <Border CornerRadius="12"
+            Background="{StaticResource BgBrush}"
+            BorderBrush="{StaticResource AccentBrush}"
+            BorderThickness="1">
+        <Grid Margin="18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Border Grid.Row="0" MouseDown="TitleBar_MouseDown" Background="Transparent" Cursor="Arrow" Margin="0,0,0,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="35"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="КАТАЛОГ НЕМОДЕЛИРУЕМЫХ"
+                               Foreground="{StaticResource AccentBrush}"
+                               FontSize="20"
+                               FontWeight="Bold"
+                               VerticalAlignment="Center"/>
+                    <Button Content="✕"
+                            Grid.Column="1"
+                            Style="{StaticResource CloseButtonStyleMini}"
+                            Click="closeButton_Click"
+                            WindowChrome.IsHitTestVisibleInChrome="True"/>
+                </Grid>
+            </Border>
+
+            <TextBlock Grid.Row="1"
+                       Text="Новую позицию можно вписать в последнюю пустую строку — каталог общий и сохраняется на сервере при закрытии окна. ADSK_Группирование и количество задаются при добавлении в модель."
+                       TextWrapping="Wrap"
+                       Foreground="{StaticResource MutedBrush}"
+                       FontSize="12"
+                       Margin="0,0,0,10"/>
+
+            <Grid Grid.Row="2" Margin="0,0,0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="Поиск:" Foreground="{StaticResource MutedBrush}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+                <TextBox Grid.Column="1"
+                         Style="{StaticResource DarkCompactTextBoxStyle}"
+                         Text="{Binding Filter, UpdateSourceTrigger=PropertyChanged}"/>
+            </Grid>
+
+            <DataGrid Grid.Row="3"
+                      x:Name="grid"
+                      ItemsSource="{Binding View}"
+                      Style="{StaticResource DarkDataGridStyle}"
+                      ColumnHeaderStyle="{StaticResource DarkDataGridColumnHeaderStyle}"
+                      CellStyle="{StaticResource DarkDataGridCellStyle}"
+                      AutoGenerateColumns="False"
+                      CanUserAddRows="True"
+                      CanUserDeleteRows="False"
+                      CanUserResizeRows="False"
+                      SelectionMode="Single"
+                      RowHeaderWidth="0"
+                      RowEditEnding="grid_RowEditEnding"
+                      Margin="0,0,0,12">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="ADSK_Наименование" Width="2.5*"
+                                        Binding="{Binding ADSK_Наименование, UpdateSourceTrigger=PropertyChanged}"
+                                        ElementStyle="{StaticResource CatalogCellTextStyle}" EditingElementStyle="{StaticResource CatalogEditStyle}"/>
+                    <DataGridTextColumn Header="ADSK_Марка" Width="*"
+                                        Binding="{Binding ADSK_Марка, UpdateSourceTrigger=PropertyChanged}"
+                                        ElementStyle="{StaticResource CatalogCellTextStyle}" EditingElementStyle="{StaticResource CatalogEditStyle}"/>
+                    <DataGridTextColumn Header="ADSK_Код изделия" Width="*"
+                                        Binding="{Binding ADSK_КодИзделия, UpdateSourceTrigger=PropertyChanged}"
+                                        ElementStyle="{StaticResource CatalogCellTextStyle}" EditingElementStyle="{StaticResource CatalogEditStyle}"/>
+                    <DataGridTextColumn Header="ADSK_Завод-изготовитель" Width="*"
+                                        Binding="{Binding ADSK_ЗаводИзготовитель, UpdateSourceTrigger=PropertyChanged}"
+                                        ElementStyle="{StaticResource CatalogCellTextStyle}" EditingElementStyle="{StaticResource CatalogEditStyle}"/>
+                    <DataGridTextColumn Header="ADSK_Единица измерения" Width="0.8*"
+                                        Binding="{Binding ADSK_ЕдиницаИзмерения, UpdateSourceTrigger=PropertyChanged}"
+                                        ElementStyle="{StaticResource CatalogCellTextStyle}" EditingElementStyle="{StaticResource CatalogEditStyle}"/>
+                    <DataGridTemplateColumn Header="" Width="110" IsReadOnly="True">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <!-- в пустой строке для новой позиции кнопки нет -->
+                                <Button Content="Добавить"
+                                        Style="{StaticResource CloseButtonStyle}"
+                                        Margin="0"
+                                        MinHeight="24"
+                                        Padding="6,1"
+                                        FontSize="11"
+                                        Visibility="{Binding Converter={x:Static local:CatalogRowVisibilityConverter.Instance}}"
+                                        Click="addButton_Click"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+
+            <Button Grid.Row="4"
+                    Content="Закрыть"
+                    Style="{StaticResource CloseButtonStyle}"
+                    IsCancel="True"
+                    Click="closeButton_Click"/>
+        </Grid>
+    </Border>
+</Window>
